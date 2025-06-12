@@ -167,3 +167,195 @@ ggplot(sexo_contagem, aes(x = sexo, y = total, fill = sexo)) +
   theme(legend.position = "none")
 
 ###############################################################################
+# Agrupar por cor e contar alunos
+cor_contagem <- alunos_sem_duplicatas %>%
+  group_by(cor) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total))
+
+# Gráfico de barras ordenado decrescentemente
+ggplot(cor_contagem, aes(x = reorder(cor, -total), y = total, fill = cor)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = total), vjust = -0.5) +
+  labs(title = "Distribuição dos Alunos por Cor/Raça (2011.1 a 2023.2)",
+       x = "Cor/Raça",
+       y = "Número de Alunos",
+       fill = "Cor/Raça") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+###############################################################################
+# Agrupar por idade e contar alunos
+idade_contagem <- alunos_sem_duplicatas %>%
+  group_by(idade_aproximada_no_ingresso) %>%
+  summarise(total = n()) %>%
+  arrange(idade_aproximada_no_ingresso)
+
+# Gráfico de barras com idade em ordem crescente
+ggplot(idade_contagem, aes(x = factor(idade_aproximada_no_ingresso, levels = idade_contagem$idade_aproximada_no_ingresso), y = total)) +
+  geom_bar(stat = "identity", fill = "#56B4E9") +
+  geom_text(aes(label = total), vjust = -0.5) +
+  labs(title = "Distribuição da Idade Aproximada no Ingresso",
+       x = "Idade Aproximada",
+       y = "Número de Alunos") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+##############################################################################
+library(dplyr)
+library(ggplot2)
+
+# Verificar os valores únicos na coluna status
+unique(alunos_sem_duplicatas$status)
+
+# Contar alunos por status
+status_count <- alunos_sem_duplicatas %>%
+  group_by(status) %>%
+  summarise(total_alunos = n()) %>%
+  arrange(desc(total_alunos))
+
+# Gráfico de barras da situação acadêmica
+ggplot(status_count, aes(x = reorder(status, -total_alunos), y = total_alunos, fill = status)) +
+  geom_col() +
+  geom_text(aes(label = total_alunos), vjust = -0.5, size = 5) +
+  labs(title = "Distribuição da Situação Acadêmica dos Alunos (2011–2023)",
+       x = "Situação Acadêmica", y = "Número de Alunos") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(size = 16, face = "bold"))
+###############################################################################
+# Filtrar alunos inativos
+inativos <- alunos_sem_duplicatas %>% filter(status == "INATIVO")
+
+# Valores únicos em tipo_de_evasão para inativos
+unique(inativos$tipo_de_evasão)
+
+library(dplyr)
+library(ggplot2)
+
+# Agrupar os dados
+dados_situacao <- alunos_sem_duplicatas %>%
+  mutate(situacao = case_when(
+    status == "ATIVO" ~ "Ativo",
+    tipo_de_evasão == "GRADUADO" ~ "Graduado",
+    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
+    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
+    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
+    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
+    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
+    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
+    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
+    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
+    TRUE ~ "Outros Inativos"
+  )) %>%
+  group_by(situacao) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total))
+
+# Gráfico de barras
+ggplot(dados_situacao, aes(x = reorder(situacao, total), y = total, fill = situacao)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Situação Acadêmica dos Alunos",
+    x = "Situação",
+    y = "Número de Alunos",
+    fill = "Situação"
+  ) +
+  theme_minimal()
+
+
+################################################################################
+library(dplyr)
+library(ggplot2)
+
+# Agrupamento e classificação das situações
+dados_situacao <- alunos_sem_duplicatas %>%
+  mutate(situacao = case_when(
+    status == "ATIVO" ~ "Ativo",
+    tipo_de_evasão == "GRADUADO" ~ "Graduado",
+    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
+    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
+    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
+    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
+    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
+    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
+    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
+    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
+    TRUE ~ "Outros Inativos"
+  )) %>%
+  group_by(situacao) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total))
+
+# Gráfico com rótulos numéricos acima das barras
+ggplot(dados_situacao, aes(x = reorder(situacao, total), y = total, fill = situacao)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = total), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  labs(
+    title = "Situação Acadêmica dos Alunos",
+    x = "Situação",
+    y = "Número de Alunos",
+    fill = "Situação"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")  # Remove legenda redundante, pois já está no eixo
+#################################################################################
+
+library(dplyr)
+library(ggplot2)
+
+# Calcular total geral
+total_geral <- nrow(alunos_sem_duplicatas)
+
+# Agrupar e calcular porcentagem
+dados_situacao <- alunos_sem_duplicatas %>%
+  mutate(situacao = case_when(
+    status == "ATIVO" ~ "Ativo",
+    tipo_de_evasão == "GRADUADO" ~ "Graduado",
+    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
+    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
+    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
+    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
+    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
+    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
+    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
+    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
+    TRUE ~ "Outros Inativos"
+  )) %>%
+  group_by(situacao) %>%
+  summarise(total = n()) %>%
+  mutate(porcentagem = round((total / total_geral) * 100, 1)) %>%
+  arrange(desc(porcentagem))
+
+# Gráfico com porcentagens
+ggplot(dados_situacao, aes(x = reorder(situacao, porcentagem), y = porcentagem, fill = situacao)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(porcentagem, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  labs(
+    title = "Distribuição Percentual das Situações Acadêmicas dos Alunos",
+    x = "Situação",
+    y = "Porcentagem (%)",
+    fill = "Situação"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+###############################################################################
+# Calcular a mediana das porcentagens
+mediana <- median(dados_situacao$porcentagem)
+
+# Dot plot com linha de mediana
+ggplot(dados_situacao, aes(x = porcentagem, y = reorder(situacao, porcentagem))) +
+  geom_point(size = 4, color = "steelblue") +
+  geom_vline(xintercept = mediana, linetype = "dashed", color = "red", linewidth = 1) +
+  labs(
+    title = "Dispersão Percentual das Situações Acadêmicas",
+    x = "Porcentagem (%)",
+    y = "Situação"
+  ) +
+  annotate("text", x = mediana + 1, y = 1, label = paste("Mediana:", mediana, "%"), color = "red", hjust = 0) +
+  theme_minimal()
