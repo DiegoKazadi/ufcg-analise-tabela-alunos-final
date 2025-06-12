@@ -97,3 +97,73 @@ taxa_evasao <- total_evadidos / total_alunos * 100
 cat("Total de alunos analisados:", total_alunos, "\n")
 cat("Total de evadidos:", total_evadidos, "\n")
 cat("Taxa de evasão (%):", round(taxa_evasao, 2), "\n")
+
+###############################################################################
+# Gráfico de linhas dos ingressantes por período:
+# Agrupar e contar ingressantes por período
+ingressantes_por_periodo <- alunos_sem_duplicatas %>%
+  group_by(período_de_ingresso) %>%
+  summarise(total_ingressantes = n()) %>%
+  arrange(período_de_ingresso)
+
+# Converter o período em fator ordenado para manter a ordem cronológica no gráfico
+ingressantes_por_periodo$período_de_ingresso <- factor(
+  ingressantes_por_periodo$período_de_ingresso,
+  levels = unique(ingressantes_por_periodo$período_de_ingresso)
+)
+
+# Criar o gráfico de linhas
+ggplot(ingressantes_por_periodo, aes(x = período_de_ingresso, y = total_ingressantes, group = 1)) +
+  geom_line(color = "#0072B2", size = 1.2) +
+  geom_point(color = "#D55E00", size = 2) +
+  labs(
+    title = "Número de Ingressantes por Período (2011.1 a 2023.2)",
+    x = "Período de Ingresso", y = "Total de Ingressantes"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+################################################################################
+# Agrupar e contar ingressantes por período
+ingressantes_por_periodo <- alunos_sem_duplicatas %>%
+  group_by(período_de_ingresso) %>%
+  summarise(total_ingressantes = n()) %>%
+  arrange(período_de_ingresso)
+
+# Converter período em fator ordenado para manter a sequência correta no gráfico
+ingressantes_por_periodo$período_de_ingresso <- factor(
+  ingressantes_por_periodo$período_de_ingresso,
+  levels = unique(ingressantes_por_periodo$período_de_ingresso)
+)
+
+# Gráfico de barras com números acima das barras
+ggplot(ingressantes_por_periodo, aes(x = período_de_ingresso, y = total_ingressantes)) +
+  geom_bar(stat = "identity", fill = "#0072B2") +
+  geom_text(aes(label = total_ingressantes), vjust = -0.5, color = "black", size = 3.5) +
+  labs(
+    title = "Número de Ingressantes por Período (2011.1 a 2023.2)",
+    x = "Período de Ingresso",
+    y = "Total de Ingressantes"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ylim(0, max(ingressantes_por_periodo$total_ingressantes) * 1.1)  # Espaço extra para o texto
+
+###############################################################################
+
+# Agrupar por sexo e contar alunos
+sexo_contagem <- alunos_sem_duplicatas %>%
+  group_by(sexo) %>%
+  summarise(total = n())
+
+# Gráfico de barras com números em cima
+ggplot(sexo_contagem, aes(x = sexo, y = total, fill = sexo)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = total), vjust = -0.5) +
+  labs(title = "Distribuição dos Alunos por Sexo (2011.1 a 2023.2)",
+       x = "Sexo",
+       y = "Número de Alunos") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+###############################################################################
