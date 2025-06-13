@@ -60,8 +60,6 @@ n_antes <- nrow(alunos)
 n_depois <- nrow(alunos_sem_duplicatas)
 cat("Registros antes:", n_antes, "\nRegistros após remoção de duplicatas:", n_depois, "\nDuplicatas removidas:", n_antes - n_depois, "\n")
 
-
-
 ###############################################################################
 
 # Ver os valores únicos da coluna status
@@ -165,6 +163,93 @@ ggplot(sexo_contagem, aes(x = sexo, y = total, fill = sexo)) +
        y = "Número de Alunos") +
   theme_minimal() +
   theme(legend.position = "none")
+
+#####
+
+# Agrupar por sexo e calcular porcentagem
+sexo_dist <- alunos_sem_duplicatas %>%
+  group_by(sexo) %>%
+  summarise(total = n()) %>%
+  mutate(porcentagem = round((total / sum(total)) * 100, 1))
+
+# Gráfico de barras com porcentagem
+ggplot(sexo_dist, aes(x = reorder(sexo, -porcentagem), y = porcentagem, fill = sexo)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(porcentagem, "%")), vjust = -0.3, size = 4.5) +
+  labs(
+    title = "Distribuição Percentual dos Alunos por Sexo",
+    x = "Sexo",
+    y = "Porcentagem (%)",
+    fill = "Sexo"
+  ) +
+  theme_minimal()
+
+####
+library(dplyr)
+library(ggplot2)
+
+# Calcular quantidade e proporção por período e sexo
+sexo_por_periodo <- alunos_sem_duplicatas %>%
+  group_by(período_de_ingresso, sexo) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  group_by(período_de_ingresso) %>%
+  mutate(porcentagem = total / sum(total) * 100)
+
+# Gráfico de barras empilhadas normalizadas
+ggplot(sexo_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = sexo)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(
+    title = "Distribuição Percentual de Alunos por Sexo em Cada Período de Ingresso",
+    x = "Período de Ingresso",
+    y = "Alunos Matriculados (%)",
+    fill = "Sexo"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+###############################################################################
+
+# Calcular quantidade e proporção por período e tipo de cota
+cota_por_periodo <- alunos_sem_duplicatas %>%
+  group_by(período_de_ingresso, cota) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  group_by(período_de_ingresso) %>%
+  mutate(porcentagem = total / sum(total) * 100)
+
+# Gráfico de barras empilhadas normalizadas
+ggplot(cota_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = cota)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(
+    title = "Distribuição Percentual dos Alunos por Tipo de Cota ao Longo dos Períodos",
+    x = "Período de Ingresso",
+    y = "Porcentagem (%)",
+    fill = "Tipo de Cota"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+###############################################################################
+
+# Calcular quantidade e proporção por período e forma de ingresso
+forma_ingresso_por_periodo <- alunos_sem_duplicatas %>%
+  group_by(período_de_ingresso, forma_de_ingresso) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  group_by(período_de_ingresso) %>%
+  mutate(porcentagem = total / sum(total) * 100)
+
+# Gráfico de barras empilhadas normalizadas
+ggplot(forma_ingresso_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = forma_de_ingresso)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(
+    title = "Distribuição Percentual dos Alunos por Forma de Ingresso",
+    x = "Período de Ingresso",
+    y = "Porcentagem (%)",
+    fill = "Forma de Ingresso"
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ###############################################################################
 # Agrupar por cor e contar alunos
