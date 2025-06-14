@@ -250,65 +250,110 @@ ggplot(forma_ingresso_por_periodo, aes(x = período_de_ingresso, y = porcentagem
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
 ###############################################################################
-# Agrupar por cor e contar alunos
-cor_contagem <- alunos_sem_duplicatas %>%
-  group_by(cor) %>%
-  summarise(total = n()) %>%
-  arrange(desc(total))
 
-# Gráfico de barras ordenado decrescentemente
-ggplot(cor_contagem, aes(x = reorder(cor, -total), y = total, fill = cor)) +
+# Agrupar por idade e calcular percentual
+# Agrupar por cor e calcular percentual
+cor_distribuicao <- alunos_sem_duplicatas %>%
+  count(cor) %>%
+  mutate(percentual = round(n / sum(n) * 100, 1))
+
+# Visualizar com gráfico de barras
+ggplot(cor_distribuicao, aes(x = reorder(cor, -percentual), y = percentual, fill = cor)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = total), vjust = -0.5) +
-  labs(title = "Distribuição dos Alunos por Cor/Raça (2011.1 a 2023.2)",
-       x = "Cor/Raça",
-       y = "Número de Alunos",
-       fill = "Cor/Raça") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-###############################################################################
-# Agrupar por idade e contar alunos
-idade_contagem <- alunos_sem_duplicatas %>%
-  group_by(idade_aproximada_no_ingresso) %>%
-  summarise(total = n()) %>%
-  arrange(idade_aproximada_no_ingresso)
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.3, size = 3.5) +
+  labs(
+    title = "Figura 4.6 - Distribuição Percentual por Cor/Raça (2011.1 a 2023.2)",
+    x = "Cor/Raça",
+    y = "Percentual (%)",
+    fill = "Cor/Raça"
+  ) +
+  theme_minimal()
 
-# Gráfico de barras com idade em ordem crescente
-ggplot(idade_contagem, aes(x = factor(idade_aproximada_no_ingresso, levels = idade_contagem$idade_aproximada_no_ingresso), y = total)) +
-  geom_bar(stat = "identity", fill = "#56B4E9") +
-  geom_text(aes(label = total), vjust = -0.5) +
-  labs(title = "Distribuição da Idade Aproximada no Ingresso",
-       x = "Idade Aproximada",
-       y = "Número de Alunos") +
+
+###############################################################################
+# Agrupar por estado civil e calcular percentual
+estado_civil <- alunos_sem_duplicatas %>%
+  count(estado_civil) %>%
+  mutate(percentual = round(n / sum(n) * 100, 1))
+
+# Visualização com gráfico de barras e percentuais
+ggplot(estado_civil, aes(x = reorder(estado_civil, -percentual), y = percentual, fill = estado_civil)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.3, size = 3.5) +
+  labs(
+    title = "Figura 4.6 - Distribuição Percentual do Estado Civil no Ingresso (2011.1 a 2023.2)",
+    x = "Estado Civil",
+    y = "Percentual (%)",
+    fill = "Estado Civil"
+  ) +
+  theme_minimal()
+
+###############################################################################
+
+# Filtrar apenas alunos no intervalo de interesse
+dados_ingressantes <- alunos_sem_duplicatas %>%
+  filter(período_de_ingresso >= "2011.1" & período_de_ingresso <= "2023.2") %>%
+  group_by(período_de_ingresso, currículo) %>%
+  summarise(total = n(), .groups = "drop")
+
+# Organizar os períodos para ordenação correta no eixo x
+dados_ingressantes$período_de_ingresso <- factor(
+  dados_ingressantes$período_de_ingresso,
+  levels = sort(unique(dados_ingressantes$período_de_ingresso))
+)
+
+# Gráfico de linha com dois currículos
+ggplot(dados_ingressantes, aes(x = período_de_ingresso, y = total, group = currículo, color = as.factor(currículo))) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Figura 4.8 – Número de Ingressantes por Currículo (2011.1 a 2023.2)",
+    x = "Período de Ingresso",
+    y = "Número de Alunos Ingressantes",
+    color = "Currículo"
+  ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ##############################################################################
 library(dplyr)
 library(ggplot2)
 
-# Verificar os valores únicos na coluna status
-unique(alunos_sem_duplicatas$status)
+# Calcular totais por situação e percentual
+dados_situacao <- alunos_sem_duplicatas %>%
+  mutate(situacao = case_when(
+    status == "ATIVO" ~ "Ativo",
+    tipo_de_evasão == "GRADUADO" ~ "Graduado",
+    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
+    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
+    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
+    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
+    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
+    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
+    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
+    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
+    TRUE ~ "Outros Inativos"
+  )) %>%
+  group_by(situacao) %>%
+  summarise(total = n()) %>%
+  mutate(percentual = round((total / sum(total)) * 100, 1)) %>%
+  arrange(desc(percentual))
 
-# Contar alunos por status
-status_count <- alunos_sem_duplicatas %>%
-  group_by(status) %>%
-  summarise(total_alunos = n()) %>%
-  arrange(desc(total_alunos))
-
-# Gráfico de barras da situação acadêmica
-ggplot(status_count, aes(x = reorder(status, -total_alunos), y = total_alunos, fill = status)) +
-  geom_col() +
-  geom_text(aes(label = total_alunos), vjust = -0.5, size = 5) +
-  labs(title = "Distribuição da Situação Acadêmica dos Alunos (2011–2023)",
-       x = "Situação Acadêmica", y = "Número de Alunos") +
-  scale_fill_brewer(palette = "Set2") +
+# Gráfico com porcentagens
+ggplot(dados_situacao, aes(x = reorder(situacao, percentual), y = percentual, fill = situacao)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  labs(
+    title = "Figura 4.9 – Situação Acadêmica dos Alunos (2011.1–2023.2)",
+    x = "Situação Acadêmica",
+    y = "Porcentagem (%)",
+    fill = "Situação"
+  ) +
   theme_minimal() +
-  theme(legend.position = "none",
-        axis.text = element_text(size = 12),
-        axis.title = element_text(size = 14),
-        plot.title = element_text(size = 16, face = "bold"))
+  theme(legend.position = "none")
+
 ###############################################################################
 # Filtrar alunos inativos
 inativos <- alunos_sem_duplicatas %>% filter(status == "INATIVO")
