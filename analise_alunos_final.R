@@ -355,83 +355,30 @@ ggplot(dados_situacao, aes(x = reorder(situacao, percentual), y = percentual, fi
   theme(legend.position = "none")
 
 ###############################################################################
-# Filtrar alunos inativos
-inativos <- alunos_sem_duplicatas %>% filter(status == "INATIVO")
-
-# Valores únicos em tipo_de_evasão para inativos
-unique(inativos$tipo_de_evasão)
-
 library(dplyr)
 library(ggplot2)
 
-# Agrupar os dados
-dados_situacao <- alunos_sem_duplicatas %>%
-  mutate(situacao = case_when(
-    status == "ATIVO" ~ "Ativo",
-    tipo_de_evasão == "GRADUADO" ~ "Graduado",
-    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
-    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
-    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
-    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
-    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
-    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
-    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
-    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
-    TRUE ~ "Outros Inativos"
-  )) %>%
-  group_by(situacao) %>%
-  summarise(total = n()) %>%
-  arrange(desc(total))
+# Filtrar apenas evasões reais (excluindo graduados)
+evasoes_reais <- alunos_sem_duplicatas %>%
+  filter(status == "INATIVO", tipo_de_evasão != "GRADUADO", !is.na(período_de_evasão))
 
-# Gráfico de barras
-ggplot(dados_situacao, aes(x = reorder(situacao, total), y = total, fill = situacao)) +
-  geom_bar(stat = "identity") +
-  coord_flip() +
+# Contagem por período de evasão
+distrib_evasao <- evasoes_reais %>%
+  count(período_de_evasão) %>%
+  arrange(período_de_evasão)
+
+# Gráfico
+ggplot(distrib_evasao, aes(x = reorder(período_de_evasão, período_de_evasão), y = n)) +
+  geom_bar(stat = "identity", fill = "#E7298A") +
+  geom_text(aes(label = n), vjust = -0.5, size = 3) +
   labs(
-    title = "Situação Acadêmica dos Alunos",
-    x = "Situação",
-    y = "Número de Alunos",
-    fill = "Situação"
-  ) +
-  theme_minimal()
-
-
-################################################################################
-library(dplyr)
-library(ggplot2)
-
-# Agrupamento e classificação das situações
-dados_situacao <- alunos_sem_duplicatas %>%
-  mutate(situacao = case_when(
-    status == "ATIVO" ~ "Ativo",
-    tipo_de_evasão == "GRADUADO" ~ "Graduado",
-    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
-    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
-    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
-    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
-    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
-    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
-    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
-    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
-    TRUE ~ "Outros Inativos"
-  )) %>%
-  group_by(situacao) %>%
-  summarise(total = n()) %>%
-  arrange(desc(total))
-
-# Gráfico com rótulos numéricos acima das barras
-ggplot(dados_situacao, aes(x = reorder(situacao, total), y = total, fill = situacao)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = total), hjust = -0.1, size = 3.5) +
-  coord_flip() +
-  labs(
-    title = "Situação Acadêmica dos Alunos",
-    x = "Situação",
-    y = "Número de Alunos",
-    fill = "Situação"
+    title = "Figura 4.10 – Período de Evasão (excluindo graduados)",
+    x = "Período Letivo",
+    y = "Quantidade de Evasões"
   ) +
   theme_minimal() +
-  theme(legend.position = "none")  # Remove legenda redundante, pois já está no eixo
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 #################################################################################
 
 library(dplyr)
