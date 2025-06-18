@@ -193,13 +193,13 @@ library(ggplot2)
 
 # Calcular quantidade e proporção por período e sexo
 sexo_por_periodo <- alunos_sem_duplicatas %>%
-  group_by(período_de_ingresso, sexo) %>%
+  group_by(periodo_de_ingresso, sexo) %>%
   summarise(total = n(), .groups = "drop") %>%
-  group_by(período_de_ingresso) %>%
+  group_by(periodo_de_ingresso) %>%
   mutate(porcentagem = total / sum(total) * 100)
 
 # Gráfico de barras empilhadas normalizadas
-ggplot(sexo_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = sexo)) +
+ggplot(sexo_por_periodo, aes(x = periodo_de_ingresso, y = porcentagem, fill = sexo)) +
   geom_bar(stat = "identity", position = "stack") +
   labs(
     title = "Distribuição Percentual de Alunos por Sexo em Cada Período de Ingresso",
@@ -215,13 +215,13 @@ ggplot(sexo_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = s
 
 # Calcular quantidade e proporção por período e tipo de cota
 cota_por_periodo <- alunos_sem_duplicatas %>%
-  group_by(período_de_ingresso, cota) %>%
+  group_by(periodo_de_ingresso, cota) %>%
   summarise(total = n(), .groups = "drop") %>%
-  group_by(período_de_ingresso) %>%
+  group_by(periodo_de_ingresso) %>%
   mutate(porcentagem = total / sum(total) * 100)
 
 # Gráfico de barras empilhadas normalizadas
-ggplot(cota_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = cota)) +
+ggplot(cota_por_periodo, aes(x = periodo_de_ingresso, y = porcentagem, fill = cota)) +
   geom_bar(stat = "identity", position = "stack") +
   labs(
     title = "Distribuição Percentual dos Alunos por Tipo de Cota ao Longo dos Períodos",
@@ -236,13 +236,13 @@ ggplot(cota_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = c
 
 # Calcular quantidade e proporção por período e forma de ingresso
 forma_ingresso_por_periodo <- alunos_sem_duplicatas %>%
-  group_by(período_de_ingresso, forma_de_ingresso) %>%
+  group_by(periodo_de_ingresso, forma_de_ingresso) %>%
   summarise(total = n(), .groups = "drop") %>%
-  group_by(período_de_ingresso) %>%
+  group_by(periodo_de_ingresso) %>%
   mutate(porcentagem = total / sum(total) * 100)
 
 # Gráfico de barras empilhadas normalizadas
-ggplot(forma_ingresso_por_periodo, aes(x = período_de_ingresso, y = porcentagem, fill = forma_de_ingresso)) +
+ggplot(forma_ingresso_por_periodo, aes(x = periodo_de_ingresso, y = porcentagem, fill = forma_de_ingresso)) +
   geom_bar(stat = "identity", position = "stack") +
   labs(
     title = "Distribuição Percentual dos Alunos por Forma de Ingresso",
@@ -294,7 +294,7 @@ ggplot(estado_civil, aes(x = reorder(estado_civil, -percentual), y = percentual,
 ##############################################################################
 # Criar variável binária de evasão (1 = evadiu, 0 = não evadiu)
 alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
-  mutate(evadiu = ifelse(status == "INATIVO" & tipo_de_evasão != "GRADUADO", 1, 0))
+  mutate(evadiu = ifelse(status == "INATIVO" & tipo_de_evasao != "GRADUADO", 1, 0))
 
 # Boxplot de evasão por estado civil
 ggplot(alunos_sem_duplicatas, aes(x = estado_civil, y = evadiu, fill = estado_civil)) +
@@ -311,7 +311,7 @@ ggplot(alunos_sem_duplicatas, aes(x = estado_civil, y = evadiu, fill = estado_ci
 
 # Criar variável binária de evasão (caso ainda não exista)
 alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
-  mutate(evadiu = ifelse(status == "INATIVO" & tipo_de_evasão != "GRADUADO", 1, 0))
+  mutate(evadiu = ifelse(status == "INATIVO" & tipo_de_evasao != "GRADUADO", 1, 0))
 
 # Boxplot de evasão por sexo
 ggplot(alunos_sem_duplicatas, aes(x = sexo, y = evadiu, fill = sexo)) +
@@ -329,18 +329,18 @@ ggplot(alunos_sem_duplicatas, aes(x = sexo, y = evadiu, fill = sexo)) +
 
 # Filtrar apenas alunos no intervalo de interesse
 dados_ingressantes <- alunos_sem_duplicatas %>%
-  filter(período_de_ingresso >= "2011.1" & período_de_ingresso <= "2023.2") %>%
-  group_by(período_de_ingresso, currículo) %>%
+  filter(periodo_de_ingresso >= "2011.1" & periodo_de_ingresso <= "2023.2") %>%
+  group_by(periodo_de_ingresso, curriculo) %>%
   summarise(total = n(), .groups = "drop")
 
 # Organizar os períodos para ordenação correta no eixo x
-dados_ingressantes$período_de_ingresso <- factor(
-  dados_ingressantes$período_de_ingresso,
-  levels = sort(unique(dados_ingressantes$período_de_ingresso))
+dados_ingressantes$periodo_de_ingresso <- factor(
+  dados_ingressantes$periodo_de_ingresso,
+  levels = sort(unique(dados_ingressantes$periodo_de_ingresso))
 )
 
 # Gráfico de linha com dois currículos
-ggplot(dados_ingressantes, aes(x = período_de_ingresso, y = total, group = currículo, color = as.factor(currículo))) +
+ggplot(dados_ingressantes, aes(x = periodo_de_ingresso, y = total, group = curriculo, color = as.factor(curriculo))) +
   geom_line(size = 1) +
   geom_point(size = 2) +
   labs(
@@ -353,22 +353,19 @@ ggplot(dados_ingressantes, aes(x = período_de_ingresso, y = total, group = curr
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ##############################################################################
-library(dplyr)
-library(ggplot2)
-
 # Calcular totais por situação e percentual
 dados_situacao <- alunos_sem_duplicatas %>%
   mutate(situacao = case_when(
     status == "ATIVO" ~ "Ativo",
-    tipo_de_evasão == "GRADUADO" ~ "Graduado",
-    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
-    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
-    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
-    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
-    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
-    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
-    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
-    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
+    tipo_de_evasao == "GRADUADO" ~ "Graduado",
+    tipo_de_evasao == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
+    tipo_de_evasao == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
+    tipo_de_evasao == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
+    tipo_de_evasao == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
+    tipo_de_evasao == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
+    tipo_de_evasao == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
+    tipo_de_evasao == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
+    tipo_de_evasao == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
     TRUE ~ "Outros Inativos"
   )) %>%
   group_by(situacao) %>%
@@ -393,19 +390,19 @@ ggplot(dados_situacao, aes(x = reorder(situacao, percentual), y = percentual, fi
 ###############################################################################
 # Filtrar apenas evasões reais (excluindo graduados)
 evasoes_reais <- alunos_sem_duplicatas %>%
-  filter(status == "INATIVO", tipo_de_evasão != "GRADUADO", !is.na(período_de_evasão))
+  filter(status == "INATIVO", tipo_de_evasao != "GRADUADO", !is.na(periodo_de_evasao))
 
 # Evasões que ocorreram no mesmo período de ingresso
 evasao_primeiro_periodo <- evasoes_reais %>%
-  filter(período_de_evasão == período_de_ingresso)
+  filter(periodo_de_evasao == periodo_de_ingresso)
 
 # Contar evasões por período de ingresso (ou seja, evasão no 1º período)
 distrib_evasao_primeiro <- evasao_primeiro_periodo %>%
-  count(período_de_ingresso) %>%
+  count(periodo_de_ingresso) %>%
   rename(quantidade_evasoes = n)
 
 # Gráfico
-ggplot(distrib_evasao_primeiro, aes(x = reorder(período_de_ingresso, período_de_ingresso), y = quantidade_evasoes)) +
+ggplot(distrib_evasao_primeiro, aes(x = reorder(periodo_de_ingresso, periodo_de_ingresso), y = quantidade_evasoes)) +
   geom_bar(stat = "identity", fill = "#E7298A") +
   geom_text(aes(label = quantidade_evasoes), vjust = -0.5, size = 3) +
   labs(
@@ -424,15 +421,15 @@ total_geral <- nrow(alunos_sem_duplicatas)
 dados_situacao <- alunos_sem_duplicatas %>%
   mutate(situacao = case_when(
     status == "ATIVO" ~ "Ativo",
-    tipo_de_evasão == "GRADUADO" ~ "Graduado",
-    tipo_de_evasão == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
-    tipo_de_evasão == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
-    tipo_de_evasão == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
-    tipo_de_evasão == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
-    tipo_de_evasão == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
-    tipo_de_evasão == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
-    tipo_de_evasão == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
-    tipo_de_evasão == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
+    tipo_de_evasao == "GRADUADO" ~ "Graduado",
+    tipo_de_evasao == "CANCELAMENTO POR ABANDONO" ~ "Cancelamento por Abandono",
+    tipo_de_evasao == "CANCELAMENTO P SOLICITACAO ALUNO" ~ "Cancelamento por Solicitação do Aluno",
+    tipo_de_evasao == "CANCELADO 3 REPROV MESMA DISCIPLINA" ~ "Cancelamento por 3 Reprovações",
+    tipo_de_evasao == "CANCELADO REPROVOU TODAS POR FALTAS" ~ "Cancelamento por Faltas",
+    tipo_de_evasao == "CANCELADO NOVO INGRESSO OUTRO CURSO" ~ "Cancelamento por Novo Ingresso",
+    tipo_de_evasao == "CANCELAMENTO DE MATRICULA" ~ "Cancelamento de Matrícula",
+    tipo_de_evasao == "CANCELAMENTO P MUDANCA CURSO" ~ "Cancelamento por Mudança de Curso",
+    tipo_de_evasao == "TRANSFERIDO PARA OUTRA IES" ~ "Transferido para Outra IES",
     TRUE ~ "Outros Inativos"
   )) %>%
   group_by(situacao) %>%
@@ -463,15 +460,15 @@ library(tidyr)
 alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
   mutate(
     curriculo = case_when(
-      período_de_ingresso < "2018.1" ~ "Currículo 1999",
+      periodo_de_ingresso < "2018.1" ~ "Currículo 1999",
       TRUE ~ "Currículo 2017"
     ),
-    evadiu = ifelse(status == "INATIVO" & tipo_de_evasão != "GRADUADO", 1, 0)
+    evadiu = ifelse(status == "INATIVO" & tipo_de_evasao != "GRADUADO", 1, 0)
   )
 
 # Agrupar e calcular taxa de evasão por período, sexo e currículo
 evasao_por_sexo <- alunos_sem_duplicatas %>%
-  group_by(curriculo, período_de_ingresso, sexo) %>%
+  group_by(curriculo, periodo_de_ingresso, sexo) %>%
   summarise(
     total_ingressantes = n(),
     total_evasoes = sum(evadiu),
@@ -491,7 +488,7 @@ resumo_evasao <- evasao_por_sexo %>%
 # Visualizar tabela completa
 tabela_resultado <- evasao_por_sexo %>%
   left_join(resumo_evasao, by = c("curriculo", "sexo")) %>%
-  arrange(curriculo, sexo, período_de_ingresso)
+  arrange(curriculo, sexo, periodo_de_ingresso)
 
 # Visualizar
 print(tabela_resultado)
@@ -506,19 +503,19 @@ alunos_limpo <- alunos_sem_duplicatas %>%
   mutate(
     sexo = toupper(sexo),
     status = toupper(status),
-    período_de_evasão = toupper(período_de_evasão),
-    currículo = as.character(currículo)
+    periodo_de_evasao = toupper(periodo_de_evasao),
+    curriculo = as.character(curriculo)
   )
 
 # Define quem é evadido de forma clara (INATIVO e não graduado)
 alunos_limpo <- alunos_limpo %>%
   mutate(
-    evadido = if_else(status == "INATIVO" & !(período_de_evasão %in% c("GRADUADO", "GRADUAÇÃO", "GRADUACAO")), TRUE, FALSE)
+    evadido = if_else(status == "INATIVO" & !(periodo_de_evasao %in% c("GRADUADO", "GRADUAÇÃO", "GRADUACAO")), TRUE, FALSE)
   )
 
 # Currículo 1999
 evasao_1999 <- alunos_limpo %>%
-  filter(currículo == "1999") %>%
+  filter(curriculo == "1999") %>%
   group_by(sexo) %>%
   summarise(
     total = n(),
@@ -529,7 +526,7 @@ evasao_1999 <- alunos_limpo %>%
 
 # Currículo 2017
 evasao_2017 <- alunos_limpo %>%
-  filter(currículo == "2017") %>%
+  filter(curriculo == "2017") %>%
   group_by(sexo) %>%
   summarise(
     total = n(),
