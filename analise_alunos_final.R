@@ -3,6 +3,8 @@ library(readr)      # Para leitura de arquivos CSV
 library(dplyr)      # Para manipulação de dados
 library(stringr)    # Para operações com strings
 library(ggplot2)    # Para visualizações futuras (opcional)
+install.packages("janitor")
+library(janitor)
 
 # Definir o caminho base onde estão os arquivos
 caminho_base <- "/home/diego/Documentos/Semestre 2024.2/Nova_Analise/tabelas"
@@ -26,6 +28,7 @@ cat("Total de colunas:", ncol(alunos), "\n")
 
 # Verificar se há valores ausentes por coluna
 colSums(is.na(alunos))
+alunos <- alunos %>% clean_names()
 
 # Mostrar nomes das colunas para referência
 names(alunos)
@@ -33,11 +36,11 @@ names(alunos)
 ################################################################################
 
 # Converte o período para formato numérico se ainda estiver como texto
-alunos$`Período de Ingresso` <- as.character(alunos$`Período de Ingresso`)
+alunos$`periodo_de_ingresso` <- as.character(alunos$`periodo_de_ingresso`)
 
 # Filtra apenas os ingressos entre 2011.1 e 2023.2
 alunos_filtrados <- alunos %>%
-  filter(`Período de Ingresso` >= "2011.1" & `Período de Ingresso` <= "2023.2")
+  filter(`periodo_de_ingresso` >= "2011.1" & `periodo_de_ingresso` <= "2023.2")
 
 # Padronizar variaves
 names(alunos) <- tolower(gsub(" ", "_", names(alunos)))
@@ -66,7 +69,7 @@ cat("Registros antes:", n_antes, "\nRegistros após remoção de duplicatas:", n
 unique(alunos_sem_duplicatas$status)
 
 # Ver os valores únicos da coluna tipo de evasao
-unique(alunos_sem_duplicatas$`tipo de evasao`)
+unique(alunos_sem_duplicatas$`tipo_de_evasao`)
 
 names(alunos_sem_duplicatas)
 
@@ -74,7 +77,7 @@ names(alunos_sem_duplicatas)
 unique(alunos_sem_duplicatas$status)
 
 # Visualizar valores únicos da coluna tipo_de_evasão
-unique(alunos_sem_duplicatas$tipo_de_evasão)
+unique(alunos_sem_duplicatas$tipo_de_evasao)
 
 ################################################################################
 
@@ -83,7 +86,7 @@ total_alunos <- nrow(alunos_sem_duplicatas)
 
 # Filtrar alunos evadidos: INATIVO e tipo de evasão não é GRADUADO nem REGULAR
 evadidos <- alunos_sem_duplicatas %>%
-  filter(status == "INATIVO" & !tipo_de_evasão %in% c("GRADUADO", "REGULAR"))
+  filter(status == "INATIVO" & !tipo_de_evasao %in% c("GRADUADO", "REGULAR"))
 
 # Contar número de evadidos
 total_evadidos <- nrow(evadidos)
@@ -100,18 +103,18 @@ cat("Taxa de evasão (%):", round(taxa_evasao, 2), "\n")
 # Gráfico de linhas dos ingressantes por período:
 # Agrupar e contar ingressantes por período
 ingressantes_por_periodo <- alunos_sem_duplicatas %>%
-  group_by(período_de_ingresso) %>%
+  group_by(periodo_de_ingresso) %>%
   summarise(total_ingressantes = n()) %>%
-  arrange(período_de_ingresso)
+  arrange(periodo_de_ingresso)
 
 # Converter o período em fator ordenado para manter a ordem cronológica no gráfico
-ingressantes_por_periodo$período_de_ingresso <- factor(
-  ingressantes_por_periodo$período_de_ingresso,
-  levels = unique(ingressantes_por_periodo$período_de_ingresso)
+ingressantes_por_periodo$periodo_de_ingresso <- factor(
+  ingressantes_por_periodo$periodo_de_ingresso,
+  levels = unique(ingressantes_por_periodo$periodo_de_ingresso)
 )
 
 # Criar o gráfico de linhas
-ggplot(ingressantes_por_periodo, aes(x = período_de_ingresso, y = total_ingressantes, group = 1)) +
+ggplot(ingressantes_por_periodo, aes(x = periodo_de_ingresso, y = total_ingressantes, group = 1)) +
   geom_line(color = "#0072B2", size = 1.2) +
   geom_point(color = "#D55E00", size = 2) +
   labs(
@@ -124,18 +127,18 @@ ggplot(ingressantes_por_periodo, aes(x = período_de_ingresso, y = total_ingress
 ################################################################################
 # Agrupar e contar ingressantes por período
 ingressantes_por_periodo <- alunos_sem_duplicatas %>%
-  group_by(período_de_ingresso) %>%
+  group_by(periodo_de_ingresso) %>%
   summarise(total_ingressantes = n()) %>%
-  arrange(período_de_ingresso)
+  arrange(periodo_de_ingresso)
 
 # Converter período em fator ordenado para manter a sequência correta no gráfico
-ingressantes_por_periodo$período_de_ingresso <- factor(
-  ingressantes_por_periodo$período_de_ingresso,
-  levels = unique(ingressantes_por_periodo$período_de_ingresso)
+ingressantes_por_periodo$periodo_de_ingresso <- factor(
+  ingressantes_por_periodo$periodo_de_ingresso,
+  levels = unique(ingressantes_por_periodo$periodo_de_ingresso)
 )
 
 # Gráfico de barras com números acima das barras
-ggplot(ingressantes_por_periodo, aes(x = período_de_ingresso, y = total_ingressantes)) +
+ggplot(ingressantes_por_periodo, aes(x = periodo_de_ingresso, y = total_ingressantes)) +
   geom_bar(stat = "identity", fill = "#0072B2") +
   geom_text(aes(label = total_ingressantes), vjust = -0.5, color = "black", size = 3.5) +
   labs(
@@ -452,20 +455,47 @@ ggplot(dados_situacao, aes(x = reorder(situacao, porcentagem), y = porcentagem, 
   theme(legend.position = "none")
 
 ###############################################################################
-# Calcular a mediana das porcentagens
-mediana <- median(dados_situacao$porcentagem)
+install.packages("tidyr")
+library(dplyr)
+library(tidyr)
 
-# Dot plot com linha de mediana
-ggplot(dados_situacao, aes(x = porcentagem, y = reorder(situacao, porcentagem))) +
-  geom_point(size = 4, color = "steelblue") +
-  geom_vline(xintercept = mediana, linetype = "dashed", color = "red", linewidth = 1) +
-  labs(
-    title = "Dispersão Percentual das Situações Acadêmicas",
-    x = "Porcentagem (%)",
-    y = "Situação"
-  ) +
-  annotate("text", x = mediana + 1, y = 1, label = paste("Mediana:", mediana, "%"), color = "red", hjust = 0) +
-  theme_minimal()
+# Classificar currículo com base no período de ingresso
+alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
+  mutate(
+    curriculo = case_when(
+      período_de_ingresso < "2018.1" ~ "Currículo 1999",
+      TRUE ~ "Currículo 2017"
+    ),
+    evadiu = ifelse(status == "INATIVO" & tipo_de_evasão != "GRADUADO", 1, 0)
+  )
+
+# Agrupar e calcular taxa de evasão por período, sexo e currículo
+evasao_por_sexo <- alunos_sem_duplicatas %>%
+  group_by(curriculo, período_de_ingresso, sexo) %>%
+  summarise(
+    total_ingressantes = n(),
+    total_evasoes = sum(evadiu),
+    taxa_evasao = round((total_evasoes / total_ingressantes) * 100, 2),
+    .groups = "drop"
+  )
+
+# Calcular média e desvio padrão da taxa de evasão por currículo e sexo
+resumo_evasao <- evasao_por_sexo %>%
+  group_by(curriculo, sexo) %>%
+  summarise(
+    media_taxa_evasao = round(mean(taxa_evasao, na.rm = TRUE), 2),
+    desvio_padrao = round(sd(taxa_evasao, na.rm = TRUE), 2),
+    .groups = "drop"
+  )
+
+# Visualizar tabela completa
+tabela_resultado <- evasao_por_sexo %>%
+  left_join(resumo_evasao, by = c("curriculo", "sexo")) %>%
+  arrange(curriculo, sexo, período_de_ingresso)
+
+# Visualizar
+print(tabela_resultado)
+table(alunos_sem_duplicatas$sexo, useNA = "ifany")
 
 ###############################################################################
 names(alunos_sem_duplicatas)
