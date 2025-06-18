@@ -288,6 +288,39 @@ ggplot(estado_civil, aes(x = reorder(estado_civil, -percentual), y = percentual,
     fill = "Estado Civil"
   ) +
   theme_minimal()
+##############################################################################
+# Criar variável binária de evasão (1 = evadiu, 0 = não evadiu)
+alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
+  mutate(evadiu = ifelse(status == "INATIVO" & tipo_de_evasão != "GRADUADO", 1, 0))
+
+# Boxplot de evasão por estado civil
+ggplot(alunos_sem_duplicatas, aes(x = estado_civil, y = evadiu, fill = estado_civil)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(
+    title = "Figura X - Distribuição da Evasão por Estado Civil (2011.1 a 2023.2)",
+    x = "Estado Civil",
+    y = "Evasão (0 = Não, 1 = Sim)",
+    fill = "Estado Civil"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(breaks = c(0, 1), labels = c("Não Evadiu", "Evadiu"))
+###############################################################################
+
+# Criar variável binária de evasão (caso ainda não exista)
+alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
+  mutate(evadiu = ifelse(status == "INATIVO" & tipo_de_evasão != "GRADUADO", 1, 0))
+
+# Boxplot de evasão por sexo
+ggplot(alunos_sem_duplicatas, aes(x = sexo, y = evadiu, fill = sexo)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(
+    title = "Figura X - Distribuição da Evasão por Sexo (2011.1 a 2023.2)",
+    x = "Sexo",
+    y = "Evasão (0 = Não, 1 = Sim)",
+    fill = "Sexo"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(breaks = c(0, 1), labels = c("Não Evadiu", "Evadiu"))
 
 ###############################################################################
 
@@ -355,35 +388,32 @@ ggplot(dados_situacao, aes(x = reorder(situacao, percentual), y = percentual, fi
   theme(legend.position = "none")
 
 ###############################################################################
-library(dplyr)
-library(ggplot2)
-
 # Filtrar apenas evasões reais (excluindo graduados)
 evasoes_reais <- alunos_sem_duplicatas %>%
   filter(status == "INATIVO", tipo_de_evasão != "GRADUADO", !is.na(período_de_evasão))
 
-# Contagem por período de evasão
-distrib_evasao <- evasoes_reais %>%
-  count(período_de_evasão) %>%
-  arrange(período_de_evasão)
+# Evasões que ocorreram no mesmo período de ingresso
+evasao_primeiro_periodo <- evasoes_reais %>%
+  filter(período_de_evasão == período_de_ingresso)
+
+# Contar evasões por período de ingresso (ou seja, evasão no 1º período)
+distrib_evasao_primeiro <- evasao_primeiro_periodo %>%
+  count(período_de_ingresso) %>%
+  rename(quantidade_evasoes = n)
 
 # Gráfico
-ggplot(distrib_evasao, aes(x = reorder(período_de_evasão, período_de_evasão), y = n)) +
+ggplot(distrib_evasao_primeiro, aes(x = reorder(período_de_ingresso, período_de_ingresso), y = quantidade_evasoes)) +
   geom_bar(stat = "identity", fill = "#E7298A") +
-  geom_text(aes(label = n), vjust = -0.5, size = 3) +
+  geom_text(aes(label = quantidade_evasoes), vjust = -0.5, size = 3) +
   labs(
-    title = "Figura 4.10 – Período de Evasão (excluindo graduados)",
-    x = "Período Letivo",
-    y = "Quantidade de Evasões"
+    title = "Evasão no Primeiro Período por Período de Ingresso",
+    x = "Período de Ingresso",
+    y = "Quantidade de Evasões no 1º Período"
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #################################################################################
-
-library(dplyr)
-library(ggplot2)
-
 # Calcular total geral
 total_geral <- nrow(alunos_sem_duplicatas)
 
@@ -436,3 +466,50 @@ ggplot(dados_situacao, aes(x = porcentagem, y = reorder(situacao, porcentagem)))
   ) +
   annotate("text", x = mediana + 1, y = 1, label = paste("Mediana:", mediana, "%"), color = "red", hjust = 0) +
   theme_minimal()
+
+###############################################################################
+names(alunos_sem_duplicatas)
+
+# Padroniza sexo e tipo de evasão
+# Primeiro, padroniza melhor os dados
+alunos_limpo <- alunos_sem_duplicatas %>%
+  mutate(
+    sexo = toupper(sexo),
+    status = toupper(status),
+    período_de_evasão = toupper(período_de_evasão),
+    currículo = as.character(currículo)
+  )
+
+# Define quem é evadido de forma clara (INATIVO e não graduado)
+alunos_limpo <- alunos_limpo %>%
+  mutate(
+    evadido = if_else(status == "INATIVO" & !(período_de_evasão %in% c("GRADUADO", "GRADUAÇÃO", "GRADUACAO")), TRUE, FALSE)
+  )
+
+# Currículo 1999
+evasao_1999 <- alunos_limpo %>%
+  filter(currículo == "1999") %>%
+  group_by(sexo) %>%
+  summarise(
+    total = n(),
+    evadidos = sum(evadido, na.rm = TRUE),
+    taxa_evasao = round((evadidos / total) * 100, 2),
+    .groups = "drop"
+  )
+
+# Currículo 2017
+evasao_2017 <- alunos_limpo %>%
+  filter(currículo == "2017") %>%
+  group_by(sexo) %>%
+  summarise(
+    total = n(),
+    evadidos = sum(evadido, na.rm = TRUE),
+    taxa_evasao = round((evadidos / total) * 100, 2),
+    .groups = "drop"
+  )
+
+cat("📘 Taxa de evasão por sexo – Currículo 1999 (excluindo graduados):\n")
+print(evasao_1999)
+
+cat("\n📗 Taxa de evasão por sexo – Currículo 2017 (excluindo graduados):\n")
+print(evasao_2017)
