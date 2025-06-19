@@ -186,10 +186,7 @@ ggplot(sexo_dist, aes(x = reorder(sexo, -porcentagem), y = porcentagem, fill = s
     fill = "Sexo"
   ) +
   theme_minimal()
-
-####
-library(dplyr)
-library(ggplot2)
+###############################################################################
 
 # Calcular quantidade e proporção por período e sexo
 sexo_por_periodo <- alunos_sem_duplicatas %>%
@@ -253,6 +250,7 @@ ggplot(forma_ingresso_por_periodo, aes(x = periodo_de_ingresso, y = porcentagem,
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ###############################################################################
 
 # Agrupar por idade e calcular percentual
@@ -453,8 +451,6 @@ ggplot(dados_situacao, aes(x = reorder(situacao, porcentagem), y = porcentagem, 
 
 ###############################################################################
 install.packages("tidyr")
-library(dplyr)
-library(tidyr)
 
 # Classificar currículo com base no período de ingresso
 alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
@@ -540,3 +536,98 @@ print(evasao_1999)
 
 cat("\n📗 Taxa de evasão por sexo – Currículo 2017 (excluindo graduados):\n")
 print(evasao_2017)
+###############################################################################
+names(alunos_sem_duplicatas)
+# Pacotes necessários
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(stringr)
+
+# Função para calcular próximo período
+proximo_periodo <- function(periodo) {
+  partes <- str_split_fixed(periodo, "\\.", 2)
+  ano <- as.integer(partes[, 1])
+  semestre <- as.integer(partes[, 2])
+  
+  novo_ano <- ifelse(semestre == 2, ano + 1, ano)
+  novo_semestre <- ifelse(semestre == 1, 2, 1)
+  
+  paste0(novo_ano, ".", novo_semestre)
+}
+
+
+# Função para calcular evasão em múltiplos períodos
+calcular_evasao_multiplos_periodos <- function(df, inicio = "2011.1", fim = "2017.2") {
+  df <- df %>%
+    filter(periodo_de_ingresso >= inicio & periodo_de_ingresso <= fim) %>%
+    mutate(
+      p1 = proximo_periodo(periodo_de_ingresso),
+      p2 = proximo_periodo(p1),
+      p3 = proximo_periodo(p2),
+      p4 = proximo_periodo(p3),
+      evadiu_p1 = ifelse(periodo_de_evasao == p1, 1, 0),
+      evadiu_p2 = ifelse(periodo_de_evasao == p2, 1, 0),
+      evadiu_p3 = ifelse(periodo_de_evasao == p3, 1, 0),
+      evadiu_p4 = ifelse(periodo_de_evasao == p4, 1, 0)
+    )
+  return(df)
+}
+
+# Estatísticas por variável e período
+estatisticas_por_variavel <- function(df, variavel, periodo) {
+  col_evasao <- paste0("evadiu_p", periodo)
+  df_periodo <- df %>%
+    group_by(.data[[variavel]]) %>%
+    summarise(
+      total = n(),
+      evasoes = sum(.data[[col_evasao]], na.rm = TRUE)
+    ) %>%
+    mutate(taxa_evasao = evasoes / total)
+  
+  media <- mean(df_periodo$taxa_evasao, na.rm = TRUE)
+  desvio <- sd(df_periodo$taxa_evasao, na.rm = TRUE)
+  list(resultado = df_periodo, media = media, desvio = desvio)
+}
+
+# Gráfico da evasão por variável
+plotar_grafico <- function(df_resultado, media, desvio, var, periodo) {
+  df_resultado <- df_resultado %>%
+    arrange(desc(taxa_evasao))
+  
+  ggplot(df_resultado, aes_string(x = var, y = "taxa_evasao", fill = var)) +
+    geom_bar(stat = "identity") +
+    geom_hline(yintercept = media, color = "red", linetype = "dashed") +
+    annotate("text", x = 1, y = media, label = sprintf("Média: %.1f%%", media * 100), vjust = -1, color = "red") +
+    geom_rect(aes(ymin = media - desvio, ymax = media + desvio),
+              xmin = -Inf, xmax = Inf, fill = "red", alpha = 0.1, inherit.aes = FALSE) +
+    scale_y_continuous(labels = percent_format(accuracy = 1)) +
+    labs(
+      title = paste("Taxa de Evasão por", str_to_title(var), "-", periodo, "º Período"),
+      x = str_to_title(var),
+      y = "Taxa de Evasão"
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Lista de variáveis a serem analisadas
+variaveis <- c("sexo", "cor", "estado_civil", "forma_de_ingresso", "cota")
+
+# Aplicação do script
+df_evasao <- calcular_evasao_multiplos_periodos(alunos_sem_duplicatas)
+
+for (periodo in 1:4) {
+  cat(paste0("\n====== Estatísticas de Evasão - ", periodo, "º Período ======\n"))
+  for (var in variaveis) {
+    stats <- estatisticas_por_variavel(df_evasao, var, periodo)
+    df_resultado <- stats$resultado
+    media <- stats$media
+    desvio <- stats$desvio
+    
+    cat(paste0("\n[", toupper(var), "] Média: ", round(media, 4), ", Desvio Padrão: ", round(desvio, 4), "\n"))
+    print(df_resultado)
+    print(plotar_grafico(df_resultado, media, desvio, var, periodo))
+  }
+}
+
