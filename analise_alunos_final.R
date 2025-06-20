@@ -855,3 +855,109 @@ for (periodo in 1:4) {
   }
 }
 
+###############################################################################
+# BOXPLOT DE VARIÁVEIS CONTÍNUAS
+
+# Boxplot para variáveis contínuas estratificadas por currículo e evasão
+library(tidyr)
+
+# Função auxiliar para gerar boxplot
+plotar_boxplot_variavel_continua <- function(df, variavel_continua, periodo) {
+  col_evasao <- paste0("evadiu_p", periodo)
+  
+  df_box <- df %>%
+    filter(!is.na(.data[[variavel_continua]])) %>%
+    select(curriculo, !!sym(variavel_continua), !!sym(col_evasao)) %>%
+    mutate(evadido = ifelse(.data[[col_evasao]] == 1, "Evadido", "Não Evadido"))
+  
+  p <- ggplot(df_box, aes(x = curriculo, y = .data[[variavel_continua]], fill = evadido)) +
+    geom_boxplot(outlier.shape = 21, outlier.size = 1.5, position = position_dodge(0.75)) +
+    scale_fill_brewer(palette = "Set2", name = "Situação") +
+    labs(
+      title = paste("Boxplot de", str_to_title(gsub("_", " ", variavel_continua)), "-", periodo, "º Período"),
+      x = "Currículo",
+      y = str_to_title(gsub("_", " ", variavel_continua))
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white"),
+      axis.text.x = element_text(angle = 0, hjust = 0.5)
+    )
+  
+  # Salvar gráfico
+  file_name <- paste0("boxplot_", periodo, "p_", variavel_continua, ".jpeg")
+  ggsave(file_name, plot = p, width = 8, height = 5.5, dpi = 300, device = "jpeg", bg = "white")
+  
+  return(p)
+}
+
+# Variáveis contínuas a analisar
+variaveis_continuas <- c("idade_aproximada_no_ingresso")
+
+# Executar boxplots para p1 a p4
+for (periodo in 1:4) {
+  for (var in variaveis_continuas) {
+    cat(paste0("\n📊 Gerando boxplot de ", var, " - ", periodo, "º período...\n"))
+    print(plotar_boxplot_variavel_continua(df_evasao, var, periodo))
+  }
+}
+
+###############################################################################
+
+# Combinar todos os períodos em um único dataframe para boxplot conjunto
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(scales)
+
+# Preparar dataframe longo
+preparar_boxplot_todos_periodos <- function(df, variavel_continua) {
+  lista <- list()
+  
+  for (periodo in 1:4) {
+    col_evasao <- paste0("evadiu_p", periodo)
+    
+    temp <- df %>%
+      select(curriculo, !!sym(variavel_continua), !!sym(col_evasao)) %>%
+      filter(!is.na(.data[[variavel_continua]])) %>%
+      mutate(
+        periodo = paste0("P", periodo),
+        evadido = ifelse(.data[[col_evasao]] == 1, "Evadido", "Não Evadido")
+      ) %>%
+      select(curriculo, periodo, evadido, !!sym(variavel_continua))
+    
+    lista[[periodo]] <- temp
+  }
+  
+  bind_rows(lista)
+}
+
+# Gerar o gráfico único
+plotar_boxplot_todos_periodos <- function(df_box, variavel_continua) {
+  ggplot(df_box, aes(x = periodo, y = .data[[variavel_continua]], fill = curriculo)) +
+    geom_boxplot(outlier.shape = 21, position = position_dodge(0.75)) +
+    scale_fill_brewer(palette = "Set2", name = "Currículo") +
+    labs(
+      title = paste("Boxplot de", str_to_title(gsub("_", " ", variavel_continua)), "nos 4 Primeiros Períodos"),
+      x = "Período de Evasão",
+      y = str_to_title(gsub("_", " ", variavel_continua))
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white"),
+      axis.text.x = element_text(angle = 0, hjust = 0.5)
+    )
+}
+
+# Executar
+variavel <- "idade_aproximada_no_ingresso"
+df_box <- preparar_boxplot_todos_periodos(df_evasao, variavel)
+
+# Plot e salvar
+grafico_boxplot_final <- plotar_boxplot_todos_periodos(df_box, variavel)
+print(grafico_boxplot_final)
+ggsave("boxplot_idade_todos_periodos.jpeg", plot = grafico_boxplot_final, width = 10, height = 6, dpi = 320, device = "jpeg", bg = "white")
