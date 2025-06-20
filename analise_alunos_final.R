@@ -634,8 +634,6 @@ for (periodo in 1:4) {
 
 ##############################################################################
 # SALVAMENTO DOS GRÁFICOS
-# Adicionar curriculo
-# Pacotes necessários
 # Pacotes necessários
 library(dplyr)
 library(ggplot2)
@@ -658,6 +656,7 @@ proximo_periodo <- function(periodo) {
 calcular_evasao_multiplos_periodos <- function(df) {
   df %>%
     mutate(
+      curriculo = as.factor(curriculo),
       p1 = proximo_periodo(periodo_de_ingresso),
       p2 = proximo_periodo(p1),
       p3 = proximo_periodo(p2),
@@ -687,7 +686,7 @@ estatisticas_por_variavel <- function(df, variavel, periodo) {
   list(resultado = df_periodo, media = media, desvio = desvio)
 }
 
-# Gráfico com comparação entre currículos + salvamento JPEG
+# Gráfico com salvamento
 plotar_grafico <- function(df_resultado, media, desvio, var, periodo) {
   df_resultado <- df_resultado %>%
     arrange(desc(taxa_evasao))
@@ -696,29 +695,32 @@ plotar_grafico <- function(df_resultado, media, desvio, var, periodo) {
     geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
     geom_hline(yintercept = media, color = "red", linetype = "dashed") +
     annotate("text", x = 1, y = media, label = sprintf("Média Geral: %.1f%%", media * 100), vjust = -1, color = "red") +
-    geom_rect(aes(ymin = media - desvio, ymax = media + desvio),
-              xmin = -Inf, xmax = Inf, fill = "red", alpha = 0.1, inherit.aes = FALSE) +
+    annotate("rect", ymin = media - desvio, ymax = media + desvio,
+             xmin = -Inf, xmax = Inf, fill = "red", alpha = 0.1) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    scale_fill_brewer(palette = "Set2") +
+    scale_fill_brewer(palette = "Set2", name = "Currículo", guide = guide_legend()) +
     labs(
       title = paste("Taxa de Evasão por", str_to_title(var), "-", periodo, "º Período"),
       x = str_to_title(var),
-      y = "Taxa de Evasão (%)",
-      fill = "Currículo"
+      y = "Taxa de Evasão (%)"
     ) +
     theme_minimal(base_size = 13) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white"),
+      legend.key = element_rect(fill = "white")
+    )
   
-  # Salvar em JPEG
+  # Salvar como JPEG
   file_name <- paste0("evasao_", periodo, "p_", var, ".jpeg")
-  ggsave(file_name, plot = p, width = 9, height = 5.5, dpi = 320, device = "jpeg")
+  ggsave(file_name, plot = p, width = 9, height = 5.5, dpi = 320, device = "jpeg", bg = "white")
   
   return(p)
 }
 
-
-# EXECUÇÃO DO SCRIPT (ANÁLISE + GRÁFICO + SALVAMENTO)
-# Lista de variáveis a analisar
+# Variáveis categóricas a analisar
 variaveis <- c("sexo", "cor", "estado_civil", "forma_de_ingresso", "cota")
 
 # Base tratada
