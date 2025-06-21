@@ -1327,4 +1327,126 @@ desvio_2017_p4 <- sd(evasao_2017_p4)
 cat(sprintf("Média da taxa de evasão: %.4f (%.1f%%)\n", media_2017_p4, media_2017_p4 * 100))
 cat(sprintf("Desvio padrão: %.4f (%.1f%%)\n", desvio_2017_p4, desvio_2017_p4 * 100))
 
+###############################################################################
+# library(ggplot2)
+library(dplyr)
+# Curvacomparativa da taxa
+# Dados fornecidos
+dados <- data.frame(
+  periodo = rep(1:4, each = 2),
+  curriculo = rep(c("1999", "2017"), times = 4),
+  media = c(12.0, 5.3, 8.9, 4.0, 8.9, 2.8, 11.3, 3.7),
+  desvio = c(4.6, 1.7, 5.3, 2.8, 2.2, 2.2, 6.4, 2.5)
+)
 
+# Converter período para fator para melhor visualização
+dados$periodo <- factor(dados$periodo, levels = 1:4, labels = paste0(1:4, "º Período"))
+
+# Plot
+ggplot(dados, aes(x = periodo, y = media, group = curriculo, color = curriculo)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = media - desvio, ymax = media + desvio), width = 0.2, size = 0.8) +
+  scale_color_manual(values = c("1999" = "#1f78b4", "2017" = "#33a02c")) +
+  labs(
+    title = "Comparação da Média da Taxa de Evasão por Currículo e Período",
+    x = "Período",
+    y = "Média da Taxa de Evasão (%)",
+    color = "Currículo"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12)
+  )
+
+##########################################################################
+
+# Gráfico de pontos com linhas (dot plot com erro)
+# Pacotes necessários
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(scales)
+
+# Dados organizados em um data frame
+dados <- data.frame(
+  Periodo = rep(1:4, each = 2),
+  Curriculo = rep(c("1999", "2017"), times = 4),
+  Media = c(12.0, 5.3,
+            8.9, 4.0,
+            8.9, 2.8,
+            11.3, 3.7),
+  Desvio = c(4.6, 1.7,
+             5.3, 2.8,
+             2.2, 2.2,
+             6.4, 2.5)
+)
+
+# Plot
+ggplot(dados, aes(x = Periodo, y = Media, color = Curriculo)) +
+  geom_point(size = 4) +                          # Pontos das médias
+  geom_line(size = 1) +                           # Linhas conectando os pontos
+  geom_errorbar(aes(ymin = Media - Desvio, ymax = Media + Desvio), 
+                width = 0.1, size = 0.8, alpha = 0.7) +  # Barras de erro (desvio padrão)
+  scale_x_continuous(breaks = 1:4, labels = paste0(1:4, "º Período")) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(
+    title = "Média da Taxa de Evasão por Currículo e Período",
+    x = "Período",
+    y = "Taxa Média de Evasão (%)",
+    color = "Currículo"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  )
+
+
+#############################################################################
+# Gráfico de radar (spider plot)
+# Instalar o pacote caso não tenha
+# install.packages("fmsb")
+
+library(fmsb)
+
+# Dados para radar (colunas = períodos, linhas = currículos)
+dados_radar <- data.frame(
+  `1º Período` = c(12.0, 5.3),
+  `2º Período` = c(8.9, 4.0),
+  `3º Período` = c(8.9, 2.8),
+  `4º Período` = c(11.3, 3.7)
+)
+rownames(dados_radar) <- c("Currículo 1999", "Currículo 2017")
+
+# Adiciona linhas para valores máximo e mínimo do gráfico
+max_val <- ceiling(max(dados_radar))  # máximo para escala
+min_val <- 0                         # mínimo
+
+dados_radar <- rbind(
+  rep(max_val, ncol(dados_radar)),   # linha de máximo
+  rep(min_val, ncol(dados_radar)),   # linha de mínimo
+  dados_radar
+)
+
+# Parâmetros visuais
+cores <- c(rgb(0.2,0.5,0.5,0.5), rgb(0.8,0.2,0.5,0.5))
+
+# Plot do gráfico radar
+radarchart(dados_radar, axistype = 1,
+           # Customização das linhas do grid
+           pcol = c("darkblue", "darkred"),
+           pfcol = cores,
+           plwd = 2,
+           plty = 1,
+           # Customização dos eixos
+           cglcol = "grey", cglty = 1, axislabcol = "grey", cglwd = 0.8,
+           # Labels dos eixos
+           vlcex = 1.2,
+           title = "Média da Taxa de Evasão por Período e Currículo")
+
+# Legenda
+legend(x = "topright", legend = rownames(dados_radar)[-c(1,2)], 
+       bty = "n", pch = 20 , col = c("darkblue", "darkred"), text.col = "black", cex = 1.1, pt.cex = 2)
