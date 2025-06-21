@@ -1243,5 +1243,74 @@ cat("📊 Estatísticas - Currículo 1999 (2º Período):\n")
 cat(sprintf("Média da taxa de evasão: %.4f (%.1f%%)\n", media_1999_p2, media_1999_p2 * 100))
 cat(sprintf("Desvio padrão: %.4f (%.1f%%)\n", desvio_1999_p2, desvio_1999_p2 * 100))
 
+# CURRICULO 2017 2° PERIODO
+# Vetor com taxas de evasão do 2º período - Currículo 2017
+# Taxas de evasão do 2º período - Currículo 2017
+taxas_2017_p2 <- c(
+  0.0538, 0.0568, 0.0316, 0.0294, 0.0404,
+  0.0000, 0.0222, 0.1000, 0.0575, 0.0115
+)
+
+# Cálculo da média e desvio padrão
+media_2017_p2 <- mean(taxas_2017_p2)
+desvio_2017_p2 <- sd(taxas_2017_p2)
+
+# Exibir resultados
+cat(sprintf("Média da taxa de evasão: %.4f (%.1f%%)\n", media_2017_p2, media_2017_p2 * 100))
+cat(sprintf("Desvio padrão: %.4f (%.1f%%)\n", desvio_2017_p2, desvio_2017_p2 * 100))
+
+# CURRICULO 1999 3° PERIODO
+# Vetor com taxas de evasão do 3º período - Currículo 1999
+# Taxas de evasão do currículo 1999 - 3º período
+taxas_1999_p3 <- c(
+  0.0886, 0.1149, 0.0795, 0.0698,
+  0.1235, 0.0968, 0.0843, 0.0800,
+  0.0532, 0.1136, 0.0988, 0.0617
+)
+
+# Cálculo da média e do desvio padrão
+media_1999_p3 <- mean(taxas_1999_p3)
+desvio_1999_p3 <- sd(taxas_1999_p3)
+
+# Exibição formatada
+cat(sprintf("Média da taxa de evasão: %.4f (%.1f%%)\n", media_1999_p3, media_1999_p3 * 100))
+cat(sprintf("Desvio padrão: %.4f (%.1f%%)\n", desvio_1999_p3, desvio_1999_p3 * 100))
+
+
+# CURRICULO 2017 3° PERIODO
+# Taxas de evasão do currículo 2017 - 3º período
+taxas_2017_p3 <- c(
+  0.0323, 0.0795, 0.0211, 0.0098,
+  0.0000, 0.0115, 0.0333, 0.0222,
+  0.0345, 0.0345
+)
+
+# Cálculo da média e do desvio padrão
+media_2017_p3 <- mean(taxas_2017_p3)
+desvio_2017_p3 <- sd(taxas_2017_p3)
+
+# Exibição formatada
+cat(sprintf("Média da taxa de evasão: %.4f (%.1f%%)\n", media_2017_p3, media_2017_p3 * 100))
+cat(sprintf("Desvio padrão: %.4f (%.1f%%)\n", desvio_2017_p3, desvio_2017_p3 * 100))
+
+
+
+# CURRICULO 1999 4° PERIODO
+# Taxas de evasão do 4º período - Currículo 1999
+evasao_1999_p4 <- c(
+  0.1646, 0.1609, 0.1591, 0.1512,
+  0.2222, 0.0968, 0.1446, 0.0667,
+  0.0426, 0.0682, 0.0741, 0.0000
+)
+
+# Cálculo da média e desvio padrão
+media_1999_p4 <- mean(evasao_1999_p4)
+desvio_1999_p4 <- sd(evasao_1999_p4)
+
+# Exibir os resultados
+cat(sprintf("Média da taxa de evasão: %.4f (%.1f%%)\n", media_1999_p4, media_1999_p4 * 100))
+cat(sprintf("Desvio padrão: %.4f (%.1f%%)\n", desvio_1999_p4, desvio_1999_p4 * 100))
+
+# CURRICULO 2017 4° PERIODO
 
 
