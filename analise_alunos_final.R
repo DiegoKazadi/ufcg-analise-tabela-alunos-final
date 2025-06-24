@@ -1556,53 +1556,102 @@ library(dplyr)
 library(ggplot2)
 library(scales)
 library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(scales)
 
-# Calcular evasão por sexo, currículo e período
+# Função para calcular evasão por sexo, currículo e período
 evasao_por_sexo_periodo <- function(df, periodo) {
   col_evasao <- paste0("evadiu_p", periodo)
   
   df %>%
-    group_by(sexo, curriculo) %>%
+    group_by(periodo = paste0(periodo, "º Período"), sexo, curriculo) %>%
     summarise(
       total = n(),
       evasoes = sum(.data[[col_evasao]], na.rm = TRUE),
       taxa_evasao = evasoes / total,
       .groups = "drop"
-    ) %>%
-    mutate(periodo = paste0("P", periodo))
+    )
 }
 
-# Juntar os dados dos 4 períodos
+# Aplicar para os quatro períodos
 df_evasao_periodos <- bind_rows(
-  evasao_por_sexo_periodo(df_evasao, 1),
-  evasao_por_sexo_periodo(df_evasao, 2),
-  evasao_por_sexo_periodo(df_evasao, 3),
-  evasao_por_sexo_periodo(df_evasao, 4)
+  lapply(1:4, function(p) evasao_por_sexo_periodo(df_evasao, p))
 )
 
-# Reorganiza a tabela no formato adequado (Tabela 5.4.2)
+# Organizar nomes mais legíveis para o gráfico
+df_evasao_periodos$periodo <- factor(df_evasao_periodos$periodo,
+                                     levels = c("1º Período", "2º Período", "3º Período", "4º Período"))
+
+# Tabela final organizada
 tabela_5_4_2 <- df_evasao_periodos %>%
-  arrange(sexo, curriculo, periodo) %>%
-  select(Sexo = sexo, Currículo = curriculo, Período = periodo, `Taxa de Evasão (%)` = taxa_evasao) %>%
-  mutate(`Taxa de Evasão (%)` = round(`Taxa de Evasão (%)` * 100, 1))
+  arrange(periodo, sexo, curriculo) %>%
+  mutate(`Taxa de Evasão (%)` = round(taxa_evasao * 100, 1)) %>%
+  select(`Período` = periodo, Sexo = sexo, Currículo = curriculo, `Taxa de Evasão (%)`)
 
 print(tabela_5_4_2)
 
-### Gráfico: Evasão por Sexo, Currículo e Período
+### Evasão por Sexo, Currículo e Período
 
-# Gráfico de linhas por sexo e currículo
-ggplot(df_evasao_periodos, aes(x = periodo, y = taxa_evasao, color = sexo, group = interaction(curriculo, sexo))) +
-  geom_line(aes(linetype = as.factor(curriculo)), size = 1) +
-  geom_point(size = 2.5) +
+ggplot(df_evasao_periodos, aes(x = periodo, y = taxa_evasao, 
+                               color = sexo, 
+                               group = interaction(sexo, curriculo),
+                               linetype = as.factor(curriculo))) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
-  scale_color_brewer(palette = "Set1", name = "Sexo") +
+  scale_color_brewer(palette = "Dark2", name = "Sexo") +
   scale_linetype_manual(name = "Currículo", values = c("1999" = "solid", "2017" = "dashed")) +
   labs(
     title = "Figura 5.4.2 – Taxa de Evasão por Sexo, Currículo e Período",
     x = "Período",
     y = "Taxa de Evasão (%)"
   ) +
-  theme_minimal(base_size = 13)
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 0, size = 12),
+    legend.position = "right",
+    panel.background = element_rect(fill = "white"),
+    plot.background = element_rect(fill = "white")
+  )
 
-### Salvando gradfico
-ggsave("figura_5_4_2_evasao_sexo_curriculo.jpeg", width = 9, height = 5.5, dpi = 320, device = "jpeg", bg = "white")
+# Salvar gráfico
+ggsave("figura_5_4_2_evasao_sexo_curriculo.jpeg", width = 10, height = 6, dpi = 320, device = "jpeg", bg = "white")
+
+
+#### média e desvio padrão por Sexo
+# Pacotes
+library(dplyr)
+
+# Dados brutos conforme informado
+dados_evasao <- data.frame(
+  Periodo = c("1º Período", "1º Período", "1º Período",
+              "2º Período", "2º Período", "2º Período", "2º Período",
+              "3º Período", "3º Período", "3º Período", "3º Período",
+              "4º Período", "4º Período", "4º Período", "4º Período"),
+  Sexo = c("FEMININO", "FEMININO", "MASCULINO",
+           "FEMININO", "FEMININO", "MASCULINO", "MASCULINO",
+           "FEMININO", "FEMININO", "MASCULINO", "MASCULINO",
+           "FEMININO", "FEMININO", "MASCULINO", "MASCULINO"),
+  Curriculo = c(1999, 2017, 1999,
+                1999, 2017, 1999, 2017,
+                1999, 2017, 1999, 2017,
+                1999, 2017, 1999, 2017),
+  Taxa = c(32.1, 16.4, 23.3,
+           14.8, 14.5, 14.1, 11.8,
+           12.3, 12.7, 15.2, 6.2,
+           7.4, 12.7, 15.0, 11.1)
+)
+
+# Calcular média e desvio padrão por Sexo e Currículo
+tabela_5_4_6 <- dados_evasao %>%
+  group_by(Sexo, Curriculo) %>%
+  summarise(
+    `Média (%)` = round(mean(Taxa), 1),
+    `Desvio Padrão (%)` = round(sd(Taxa), 1),
+    .groups = "drop"
+  ) %>%
+  arrange(Sexo, Curriculo)
+
+# Exibir tabela formatada
+print(tabela_5_4_6)
