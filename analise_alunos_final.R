@@ -222,6 +222,7 @@ ggplot(sexo_dist, aes(x = reorder(sexo, -porcentagem), y = porcentagem, fill = s
     fill = "Sexo"
   ) +
   theme_minimal()
+
 ###############################################################################
 
 # Calcular quantidade e proporção por período e sexo
@@ -265,6 +266,8 @@ ggplot(cota_por_periodo, aes(x = periodo_de_ingresso, y = porcentagem, fill = co
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
 ###############################################################################
 
 # Calcular quantidade e proporção por período e forma de ingresso
@@ -678,6 +681,7 @@ for (periodo in 1:4) {
 }
 
 ##############################################################################
+
 # SALVAMENTO DOS GRÁFICOS
 # Pacotes necessários
 # SALVAMENTO DOS GRÁFICOS
@@ -1450,3 +1454,155 @@ radarchart(dados_radar, axistype = 1,
 # Legenda
 legend(x = "topright", legend = rownames(dados_radar)[-c(1,2)], 
        bty = "n", pch = 20 , col = c("darkblue", "darkred"), text.col = "black", cex = 1.1, pt.cex = 2)
+
+###############################################################################
+
+
+# Carregar pacotes necessários
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(tidyr)
+library(scales)
+
+# --- Função para filtrar evasões reais ---
+filtrar_evasoes_reais <- function(df) {
+  df %>%
+    filter(
+      curriculo %in% c(1999, 2017),
+      status == "INATIVO",
+      tipo_de_evasao != "GRADUADO",
+      !is.na(periodo_de_evasao)
+    )
+}
+
+# --- Função para calcular próximo período ---
+proximo_periodo <- function(periodo) {
+  partes <- str_split_fixed(periodo, "\\.", 2)
+  ano <- as.integer(partes[, 1])
+  semestre <- as.integer(partes[, 2])
+  novo_ano <- ifelse(semestre == 2, ano + 1, ano)
+  novo_semestre <- ifelse(semestre == 1, 2, 1)
+  paste0(novo_ano, ".", novo_semestre)
+}
+
+# --- Calcular evasão em múltiplos períodos ---
+calcular_evasao_multiplos_periodos <- function(df) {
+  df %>%
+    filtrar_evasoes_reais() %>%
+    mutate(
+      curriculo = as.factor(curriculo),
+      p1 = proximo_periodo(periodo_de_ingresso),
+      p2 = proximo_periodo(p1),
+      p3 = proximo_periodo(p2),
+      p4 = proximo_periodo(p3),
+      evadiu_p1 = ifelse(periodo_de_evasao == p1, 1, 0),
+      evadiu_p2 = ifelse(periodo_de_evasao == p2, 1, 0),
+      evadiu_p3 = ifelse(periodo_de_evasao == p3, 1, 0),
+      evadiu_p4 = ifelse(periodo_de_evasao == p4, 1, 0)
+    )
+}
+
+# --- Preparar dados para boxplot geral ---
+preparar_dados_boxplot <- function(df) {
+  df_long <- df %>%
+    select(curriculo, starts_with("evadiu_p")) %>%
+    pivot_longer(
+      cols = starts_with("evadiu_p"),
+      names_to = "periodo",
+      names_prefix = "evadiu_p",
+      values_to = "evasao"
+    ) %>%
+    mutate(
+      periodo = paste0(as.integer(periodo), "º Período"),
+      periodo = factor(periodo, levels = paste0(1:4, "º Período")),
+      curriculo = factor(curriculo, levels = c("1999", "2017"))
+    )
+  return(df_long)
+}
+
+# --- Gerar gráfico boxplot geral ---
+gerar_boxplot_geral <- function(df_long) {
+  p <- ggplot(df_long, aes(x = periodo, y = evasao, fill = curriculo)) +
+    geom_boxplot(outlier.shape = 21, outlier.size = 2, position = position_dodge(width = 0.75)) +
+    scale_fill_manual(values = c("1999" = "orange", "2017" = "steelblue"), name = "Currículo") +
+    scale_y_continuous(labels = percent_format(accuracy = 1)) +
+    labs(
+      title = "Distribuição das Taxas de Evasão por Currículo e Período",
+      x = "Período",
+      y = "Taxa de Evasão"
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white"),
+      legend.key = element_rect(fill = "white"),
+      axis.text.x = element_text(angle = 0, hjust = 0.5)
+    )
+  
+  ggsave("boxplot_evasao_curriculos.jpeg", plot = p, width = 9, height = 6, dpi = 320, bg = "white")
+  return(p)
+}
+
+# --- Executar ---
+df_evasao <- calcular_evasao_multiplos_periodos(alunos_sem_duplicatas)
+df_boxplot <- preparar_dados_boxplot(df_evasao)
+gerar_boxplot_geral(df_boxplot)
+
+###############################################################################
+
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(tidyr)
+
+# Calcular evasão por sexo, currículo e período
+evasao_por_sexo_periodo <- function(df, periodo) {
+  col_evasao <- paste0("evadiu_p", periodo)
+  
+  df %>%
+    group_by(sexo, curriculo) %>%
+    summarise(
+      total = n(),
+      evasoes = sum(.data[[col_evasao]], na.rm = TRUE),
+      taxa_evasao = evasoes / total,
+      .groups = "drop"
+    ) %>%
+    mutate(periodo = paste0("P", periodo))
+}
+
+# Juntar os dados dos 4 períodos
+df_evasao_periodos <- bind_rows(
+  evasao_por_sexo_periodo(df_evasao, 1),
+  evasao_por_sexo_periodo(df_evasao, 2),
+  evasao_por_sexo_periodo(df_evasao, 3),
+  evasao_por_sexo_periodo(df_evasao, 4)
+)
+
+# Reorganiza a tabela no formato adequado (Tabela 5.4.2)
+tabela_5_4_2 <- df_evasao_periodos %>%
+  arrange(sexo, curriculo, periodo) %>%
+  select(Sexo = sexo, Currículo = curriculo, Período = periodo, `Taxa de Evasão (%)` = taxa_evasao) %>%
+  mutate(`Taxa de Evasão (%)` = round(`Taxa de Evasão (%)` * 100, 1))
+
+print(tabela_5_4_2)
+
+### Gráfico: Evasão por Sexo, Currículo e Período
+
+# Gráfico de linhas por sexo e currículo
+ggplot(df_evasao_periodos, aes(x = periodo, y = taxa_evasao, color = sexo, group = interaction(curriculo, sexo))) +
+  geom_line(aes(linetype = as.factor(curriculo)), size = 1) +
+  geom_point(size = 2.5) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_color_brewer(palette = "Set1", name = "Sexo") +
+  scale_linetype_manual(name = "Currículo", values = c("1999" = "solid", "2017" = "dashed")) +
+  labs(
+    title = "Figura 5.4.2 – Taxa de Evasão por Sexo, Currículo e Período",
+    x = "Período",
+    y = "Taxa de Evasão (%)"
+  ) +
+  theme_minimal(base_size = 13)
+
+### Salvando gradfico
+ggsave("figura_5_4_2_evasao_sexo_curriculo.jpeg", width = 9, height = 5.5, dpi = 320, device = "jpeg", bg = "white")
