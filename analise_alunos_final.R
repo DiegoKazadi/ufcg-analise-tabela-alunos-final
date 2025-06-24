@@ -1593,33 +1593,31 @@ print(tabela_5_4_2)
 
 ### Evasão por Sexo, Currículo e Período
 
-ggplot(df_evasao_periodos, aes(x = periodo, y = taxa_evasao, 
-                               color = sexo, 
-                               group = interaction(sexo, curriculo),
-                               linetype = as.factor(curriculo))) +
-  geom_line(size = 1.2) +
-  geom_point(size = 3) +
+ggplot(df_evasao_periodos, aes(x = as.factor(periodo), y = taxa_evasao, 
+                               fill = sexo)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  facet_wrap(~curriculo, labeller = label_both) +
   scale_y_continuous(labels = percent_format(accuracy = 1)) +
-  scale_color_brewer(palette = "Dark2", name = "Sexo") +
-  scale_linetype_manual(name = "Currículo", values = c("1999" = "solid", "2017" = "dashed")) +
+  scale_fill_brewer(palette = "Dark2", name = "Sexo") +
   labs(
-    title = "Figura 5.4.2 – Taxa de Evasão por Sexo, Currículo e Período",
+    title = "Figura 5.4.5 – Taxa de Evasão por Sexo, Currículo e Período",
     x = "Período",
     y = "Taxa de Evasão (%)"
   ) +
   theme_minimal(base_size = 13) +
   theme(
-    axis.text.x = element_text(angle = 0, size = 12),
+    axis.text.x = element_text(size = 12, angle = 90, hjust = 1),
     legend.position = "right",
     panel.background = element_rect(fill = "white"),
     plot.background = element_rect(fill = "white")
   )
 
-# Salvar gráfico
-ggsave("figura_5_4_2_evasao_sexo_curriculo.jpeg", width = 10, height = 6, dpi = 320, device = "jpeg", bg = "white")
+
+ggsave("figura_5_4_2_barras_evasao_sexo_curriculo.jpeg", width = 10, height = 6, dpi = 320, device = "jpeg", bg = "white")
 
 
-#### média e desvio padrão por Sexo
+################################################################################
+### média e desvio padrão por Sexo
 # Pacotes
 library(dplyr)
 
@@ -1655,3 +1653,85 @@ tabela_5_4_6 <- dados_evasao %>%
 
 # Exibir tabela formatada
 print(tabela_5_4_6)
+
+
+###############################################################################
+
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(tidyr)
+
+# ⚙️ Função para organizar dados por período de evasão
+idade_evasao_estatisticas <- function(df, periodo) {
+  col_evasao <- paste0("evadiu_p", periodo)
+  nome_periodo <- paste0(periodo, "º Período")
+  
+  df_filtrado <- df %>%
+    filter(curriculo %in% c(1999, 2017)) %>%
+    filter(!is.na(idade_aproximada_no_ingresso)) %>%
+    filter(tipo_de_evasao != "GRADUADO") %>%
+    mutate(evadiu = .data[[col_evasao]] == 1)
+  
+  tabela <- df_filtrado %>%
+    group_by(curriculo) %>%
+    summarise(
+      Ingressantes = n(),
+      Evadiram = sum(evadiu, na.rm = TRUE),
+      `Taxa de Evasão` = round(Evadiram / Ingressantes * 100, 1),
+      `Média Idade` = round(mean(idade_aproximada_no_ingresso[evadiu], na.rm = TRUE), 1),
+      `Desvio Padrão` = round(sd(idade_aproximada_no_ingresso[evadiu], na.rm = TRUE), 1),
+      .groups = "drop"
+    ) %>%
+    mutate(Período = nome_periodo) %>%
+    select(Período, everything())
+  
+  return(tabela)
+}
+
+# Aplicar para todos os 4 períodos
+tabela_estatisticas <- bind_rows(
+  lapply(1:4, function(p) idade_evasao_estatisticas(df_evasao, p))
+)
+
+# Visualizar tabela
+print(tabela_estatisticas)
+
+# Salvar tabela em CSV
+write.csv(tabela_estatisticas, "tabela_evasao_idade_por_curriculo.csv", row.names = FALSE)
+
+# 🎨 Boxplot somente dos evadidos
+df_box <- bind_rows(
+  lapply(1:4, function(p) {
+    col_evasao <- paste0("evadiu_p", p)
+    df_evasao %>%
+      filter(curriculo %in% c(1999, 2017)) %>%
+      filter(!is.na(idade_aproximada_no_ingresso)) %>%
+      filter(tipo_de_evasao != "GRADUADO") %>%
+      filter(.data[[col_evasao]] == 1) %>%
+      mutate(
+        Período = paste0(p, "º Período")
+      ) %>%
+      select(curriculo, Período, idade_aproximada_no_ingresso)
+  })
+)
+
+# Plotar gráfico
+ggplot(df_box, aes(x = curriculo, y = idade_aproximada_no_ingresso, fill = as.factor(curriculo))) +
+  geom_boxplot(outlier.shape = 21, outlier.size = 1.5) +
+  facet_wrap(~Período, labeller = label_both) +
+  scale_fill_brewer(palette = "Set2", name = "Currículo") +
+  labs(
+    title = "Boxplot da Idade dos Alunos Evadidos por Currículo e Período",
+    x = "Currículo",
+    y = "Idade Aproximada no Ingresso"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(size = 12),
+    legend.position = "right",
+    panel.background = element_rect(fill = "white"),
+    plot.background = element_rect(fill = "white")
+  )
+
+ggsave("boxplot_idade_evasao_curriculo.jpeg", width = 10, height = 6, dpi = 320, device = "jpeg", bg = "white")
