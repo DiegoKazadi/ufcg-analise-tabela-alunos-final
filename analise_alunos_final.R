@@ -37,7 +37,7 @@ alunos <- alunos %>% clean_names()
 names(alunos)
 
 ################################################################################
-
+# Filtrar no intervalo 2011 à 2023
 # Converte o período para formato numérico se ainda estiver como texto
 alunos$`periodo_de_ingresso` <- as.character(alunos$`periodo_de_ingresso`)
 
@@ -273,6 +273,150 @@ ggplot(df_idade, aes(x = idade_aproximada_no_ingresso, fill = curriculo, color =
   scale_fill_brewer(palette = "Set2") +
   scale_color_brewer(palette = "Set2")
 
+### Gráfico de Barras com Faixas Etárias
+
+# Preparar dados
+df_idade <- alunos_sem_duplicatas %>%
+  filter(!is.na(idade_aproximada_no_ingresso), curriculo %in% c(1999, 2017)) %>%
+  mutate(
+    curriculo = factor(curriculo, levels = c(1999, 2017),
+                       labels = c("Currículo 1999", "Currículo 2017")),
+    faixa_etaria = cut(
+      idade_aproximada_no_ingresso,
+      breaks = c(17, 20, 23, 26, 29, 32, 40, Inf),
+      right = FALSE,
+      labels = c("18–20", "21–23", "24–26", "27–29", "30–32", "33–40", "40+")
+    )
+  )
+
+# Calcular distribuição percentual
+dist_idade <- df_idade %>%
+  count(curriculo, faixa_etaria) %>%
+  group_by(curriculo) %>%
+  mutate(percentual = n / sum(n) * 100)
+
+# "#D55E00"
+
+# Gráfico de barras empilhadas com legenda otimizada
+ggplot(dist_idade, aes(x = faixa_etaria, y = percentual, fill = curriculo)) +
+  geom_bar(stat = "identity", position = "dodge", color = "#0072B2", width = 0.7) +
+  geom_text(aes(label = paste0(round(percentual, 1), "%")),
+            position = position_dodge(width = 0.7),
+            vjust = -0.4, size = 4.2) +
+  scale_fill_viridis_d(option = "D", begin = 0.2, end = 0.8) +
+  labs(
+    title = "Distribuição Percentual da Idade no Ingresso por Currículo",
+    subtitle = "Comparação entre faixas etárias e currículos 1999 vs. 2017",
+    x = "Faixa Etária no Ingresso",
+    y = "Percentual (%)",
+    fill = "Currículo"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text(size = 12),
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13)
+  )
+
+### TAXA DE EVASÃO
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(viridis)
+
+# --- Preparar faixas etárias ---
+df_idade_evasao <- alunos_sem_duplicatas %>%
+  filter(!is.na(idade_aproximada_no_ingresso), curriculo %in% c(1999, 2017)) %>%
+  mutate(
+    curriculo = factor(curriculo, levels = c(1999, 2017),
+                       labels = c("Currículo 1999", "Currículo 2017")),
+    faixa_etaria = cut(
+      idade_aproximada_no_ingresso,
+      breaks = c(17, 20, 23, 26, 29, 32, 40, Inf),
+      right = FALSE,
+      labels = c("18–20", "21–23", "24–26", "27–29", "30–32", "33–40", "40+")
+    )
+  )
+
+# --- Adicionar períodos de evasão calculados ---
+proximo_periodo <- function(periodo) {
+  partes <- stringr::str_split_fixed(periodo, "\\.", 2)
+  ano <- as.integer(partes[, 1])
+  semestre <- as.integer(partes[, 2])
+  novo_ano <- ifelse(semestre == 2, ano + 1, ano)
+  novo_semestre <- ifelse(semestre == 1, 2, 1)
+  paste0(novo_ano, ".", novo_semestre)
+}
+
+df_idade_evasao <- df_idade_evasao %>%
+  mutate(
+    p1 = proximo_periodo(periodo_de_ingresso),
+    p2 = proximo_periodo(p1),
+    p3 = proximo_periodo(p2),
+    p4 = proximo_periodo(p3),
+    evadiu_p1 = ifelse(periodo_de_evasao == p1, 1, 0),
+    evadiu_p2 = ifelse(periodo_de_evasao == p2, 1, 0),
+    evadiu_p3 = ifelse(periodo_de_evasao == p3, 1, 0),
+    evadiu_p4 = ifelse(periodo_de_evasao == p4, 1, 0)
+  )
+
+# --- Função para calcular estatísticas por período ---
+calc_stats_idade <- function(df, periodo) {
+  col_evasao <- paste0("evadiu_p", periodo)
+  
+  df %>%
+    group_by(curriculo, faixa_etaria) %>%
+    summarise(
+      total = n(),
+      evasoes = sum(.data[[col_evasao]], na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(taxa_evasao = evasoes / total)
+}
+
+# --- Plotar gráfico para cada período ---
+for (p in 1:4) {
+  stats <- calc_stats_idade(df_idade_evasao, p)
+  
+  # Calcular média e desvio global do período
+  media <- mean(stats$taxa_evasao, na.rm = TRUE)
+  desvio <- sd(stats$taxa_evasao, na.rm = TRUE)
+  
+  gg <- ggplot(stats, aes(x = faixa_etaria, y = taxa_evasao, fill = curriculo)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.65, color = "gray40") +
+    
+    geom_text(aes(label = scales::percent(taxa_evasao, accuracy = 0.1)),
+              position = position_dodge(width = 0.7), vjust = -0.4, size = 3.8) +
+    
+    geom_hline(yintercept = media, linetype = "dashed", color = "red") +
+    
+    annotate("text", x = 6.9, y = media + 0.005,
+             label = paste0("Média global: ", round(media * 100, 1), "%"),
+             color = "red", size = 4.5, hjust = 1) +
+    
+    scale_y_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, 0.1))) +
+    scale_fill_viridis_d(option = "C", begin = 0.3, end = 0.8) +
+    labs(
+      title = paste("Taxa de Evasão por Faixa Etária -", p, "º Período"),
+      subtitle = "Comparativo entre Currículos 1999 e 2017",
+      x = "Faixa Etária (anos)",
+      y = "Taxa de Evasão (%)",
+      fill = "Currículo"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      legend.position = "top",
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      plot.title = element_text(face = "bold", size = 16)
+    )
+  
+  print(gg)
+  
+  # Salvar como imagem
+  ggsave(paste0("taxa_evasao_idade_p", p, ".jpeg"), gg, width = 9, height = 5.5, dpi = 320, bg = "white")
+}
 
 
 
