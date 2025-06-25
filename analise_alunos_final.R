@@ -5,6 +5,9 @@ library(stringr)    # Para operações com strings
 library(ggplot2)    # Para visualizações futuras (opcional)
 install.packages("janitor")
 library(janitor)
+library(scales)
+library(viridis)  # Paleta moderna e acessível
+library(ggthemes) # Tema mais elegante
 
 # Definir o caminho base onde estão os arquivos
 caminho_base <- "/home/diego/Documentos/Semestre 2024.2/Nova_Analise/tabelas"
@@ -45,9 +48,6 @@ alunos_filtrados <- alunos %>%
 # Padronizar variaves
 names(alunos) <- tolower(gsub(" ", "_", names(alunos)))
 
-# Mostrar nomes das colunas para referência
-names(alunos)
-
 ################################################################################
 
 # Padroniza nomes das colunas para minúsculas
@@ -75,9 +75,6 @@ names(alunos_sem_duplicatas)
 
 # Visualizar valores únicos da coluna status
 unique(alunos_sem_duplicatas$status)
-
-# Visualizar valores únicos da coluna tipo_de_evasão
-unique(alunos_sem_duplicatas$tipo_de_evasao)
 
 ################################################################################
 
@@ -152,9 +149,6 @@ ggplot(ingressantes_por_periodo, aes(x = periodo_de_ingresso, y = total_ingressa
 
 ###############################################################################
 # curva de ingressantes
-library(dplyr)
-library(ggplot2)
-library(scales)
 
 # Agrupar dados por período e currículo
 df_ingressantes <- alunos_sem_duplicatas %>%
@@ -184,8 +178,6 @@ ggplot(df_ingressantes, aes(x = periodo_de_ingresso, y = total_ingressantes, col
     legend.position = "top",
     plot.background = element_rect(fill = "white", color = NA)
   )
-
-
 
 ###############################################################################
 # Agrupar por sexo e contar alunos
@@ -244,6 +236,45 @@ ggplot(sexo_por_periodo, aes(x = periodo_de_ingresso, y = porcentagem, fill = se
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+###############################################################################
+# VISUALIZAÇÃO DISTRIBUIÇÃO IDADE
+library(ggplot2)
+library(dplyr)
+
+# Filtrar apenas ingressantes válidos com idade e currículo definidos
+df_idade <- alunos_sem_duplicatas %>%
+  filter(!is.na(idade_aproximada_no_ingresso), curriculo %in% c(1999, 2017))
+
+# Transformar curriculo em fator (para controlar a ordem)
+df_idade$curriculo <- factor(df_idade$curriculo, levels = c(1999, 2017))
+
+# --- BOXPLOT: distribuição por currículo ---
+ggplot(df_idade, aes(x = curriculo, y = idade_aproximada_no_ingresso, fill = curriculo)) +
+  geom_boxplot(alpha = 0.7, color = "black") +
+  scale_fill_brewer(palette = "Pastel1") +
+  labs(
+    title = "Distribuição da Idade no Ingresso por Currículo",
+    x = "Currículo",
+    y = "Idade Aproximada no Ingresso"
+  ) +
+  theme_minimal(base_size = 14)
+
+# --- DENSIDADE: forma da distribuição ---
+ggplot(df_idade, aes(x = idade_aproximada_no_ingresso, fill = curriculo, color = curriculo)) +
+  geom_density(alpha = 0.3, size = 1.2) +
+  labs(
+    title = "Curvas de Densidade da Idade por Currículo",
+    x = "Idade Aproximada no Ingresso",
+    y = "Densidade"
+  ) +
+  theme_minimal(base_size = 14) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2")
+
+
+
 
 ###############################################################################
 
@@ -1079,12 +1110,6 @@ ggsave("boxplot_idade_todos_periodos.jpeg", plot = grafico_boxplot_final, width 
 
 
 ###
-# Pacotes necessários
-library(dplyr)
-library(ggplot2)
-library(scales)
-library(stringr)
-
 # --- Função para filtrar evasões reais ---
 filtrar_evasoes_reais <- function(df) {
   df %>%
