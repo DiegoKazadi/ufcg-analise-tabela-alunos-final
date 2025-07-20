@@ -533,50 +533,71 @@ ggplot(graduados_taxa, aes(x = curriculo, y = qtd_graduados, fill = curriculo)) 
 
 ###
 
-# Contar evasões e calcular proporção por currículo
+names(alunos_sem_duplicatas)
 
-evasao_curriculo <- alunos_periodo %>%
+library(dplyr)
+library(ggplot2)
+
+# Calcular tempo até evasão/conclusão
+tempo_medio <- alunos_sem_duplicatas %>%
+  filter(status == "INATIVO") %>%
+  mutate(tempo_decorrido = as.numeric(periodo_de_evasao) - as.numeric(periodo_de_ingresso)) %>%
+  group_by(curriculo) %>%
+  summarise(
+    tempo_medio = round(mean(tempo_decorrido, na.rm = TRUE), 2),
+    n = n()
+  )
+
+# Imprimir valores no console
+print(tempo_medio)
+
+# Gráfico
+ggplot(tempo_medio, aes(x = curriculo, y = tempo_medio, fill = curriculo)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = paste0(tempo_medio, " períodos")), vjust = -0.5, size = 5) +
+  labs(
+    title = "Tempo Médio até Evasão ",
+    x = "Currículo",
+    y = "Tempo Médio (em períodos)",
+    fill = "Currículo"
+  ) +
+  scale_fill_manual(values = c("Currículo 1999" = "forestgreen", "Currículo 2017" = "darkorange")) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+###
+
+# média de idade ao ingresso dos evadidos por currículo
+
+library(dplyr)
+
+idade_ingresso_evasao <- alunos_sem_duplicatas %>%
   filter(status == "INATIVO", tipo_de_evasao != "GRADUADO") %>%
   group_by(curriculo) %>%
   summarise(
-    evasoes = n()
+    media_idade_ingresso = mean(idade_aproximada_no_ingresso, na.rm = TRUE),
+    sd_idade_ingresso = sd(idade_aproximada_no_ingresso, na.rm = TRUE),
+    qtd = n()
   )
 
-# E comparar com o total de ingressantes por currículo:
+print(idade_ingresso_evasao)
 
-ingressantes_curriculo <- alunos_periodo %>%
-  group_by(curriculo) %>%
-  summarise(ingressantes = n())
 
-comparativo <- left_join(evasao_curriculo, ingressantes_curriculo, by = "curriculo") %>%
-  mutate(taxa_evasao = round((evasoes / ingressantes) * 100, 2))
+library(ggplot2)
 
-# Visualizar o comparativo em gráfico de barras
-
-ggplot(comparativo, aes(x = curriculo, y = taxa_evasao, fill = curriculo)) +
-  geom_bar(stat = "identity") +
+ggplot(idade_ingresso_evasao, aes(x = curriculo, y = media_idade_ingresso, fill = curriculo)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = round(media_idade_ingresso, 1)), vjust = -0.5, size = 5) +
   labs(
-    title = "Comparativo de Evasão entre Currículos (2011–2023)",
+    title = "Idade Média ao Ingresso dos Alunos Evadidos",
     x = "Currículo",
-    y = "Taxa de Evasão (%)"
+    y = "Idade Média ao Ingresso"
   ) +
-  scale_fill_manual(values = c("Currículo 1999" = "#0072B2", "Currículo 2017" = "#D55E00")) +
-  theme_minimal()
-
-# Visualização por período e currículo juntos
-
-evasao_por_periodo <- alunos_periodo %>%
-  mutate(evasao = ifelse(status == "INATIVO" & tipo_de_evasao != "GRADUADO", 1, 0)) %>%
-  group_by(periodo_de_ingresso, curriculo) %>%
-  summarise(
-    evasoes = sum(evasao),
-    total = n(),
-    taxa_evasao = round((evasoes / total) * 100, 2),
-    .groups = 'drop'
-  )
-
-
-
+  theme_minimal() +
+  theme(legend.position = "none")
 
 
 
