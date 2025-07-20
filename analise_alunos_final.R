@@ -1,6 +1,7 @@
 # Carregar bibliotecas necessárias
 install.packages(c("ggplot2", "dplyr", "readr", "tidyr", "tibble", "stringr", "purrr", "forcats"))
 install.packages("tidyverse")
+install.packages("ggplot2")
 
 # Carregamento das bibliotecas necessárias
 library(tidyverse)  # carrega: ggplot2, dplyr, readr, stringr, forcats, etc.
@@ -8,6 +9,7 @@ library(janitor)    # limpeza de nomes e tabelas
 library(gt)         # para gerar tabelas elegantes
 library(viridis)    # paleta de cores acessível
 library(ggthemes)   # temas extras para gráficos
+library(ggplot2)
 
 
 library(dplyr) # Testando
@@ -276,6 +278,11 @@ alunos_sem_duplicatas %>%
 ###
 
 
+#  Filtrar somente os períodos entre 2011.1 e 2023.2
+
+alunos_periodo <- alunos_sem_duplicatas %>%
+  filter(periodo_de_ingresso >= "2011.1", periodo_de_ingresso <= "2023.2")
+
 
 #  Classificar alunos por currículo com base no período de ingresso
 
@@ -285,10 +292,193 @@ alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
     periodo_de_ingresso >= "2017.2" ~ "Currículo 2017"
   ))
 
-#  Filtrar somente os períodos entre 2011.1 e 2023.2
+### 
 
+library(dplyr)
+
+# Filtrar alunos do período entre 2011.1 e 2023.2
 alunos_periodo <- alunos_sem_duplicatas %>%
   filter(periodo_de_ingresso >= "2011.1", periodo_de_ingresso <= "2023.2")
+
+# Classificar currículo com base no período de ingresso
+alunos_periodo <- alunos_periodo %>%
+  mutate(curriculo = case_when(
+    periodo_de_ingresso < "2018.1" ~ "Currículo 1999",
+    TRUE ~ "Currículo 2017"
+  ))
+
+# Filtrar apenas alunos que se graduaram (evitando confusão com outros inativos)
+alunos_graduados <- alunos_periodo %>%
+  filter(status == "INATIVO", tipo_de_evasao == "GRADUADO")
+
+# Contagem de graduados por currículo
+graduados_por_curriculo <- alunos_graduados %>%
+  group_by(curriculo) %>%
+  summarise(total_graduados = n()) %>%
+  arrange(curriculo)
+
+print(graduados_por_curriculo)
+
+###
+
+# Contar número de períodos distintos por currículo
+periodos_por_curriculo <- alunos_sem_duplicatas %>%
+  distinct(periodo_de_ingresso, curriculo) %>%
+  count(curriculo)
+
+print(periodos_por_curriculo)
+
+alunos_sem_duplicatas %>%
+  filter(curriculo == "Currículo 1999") %>%
+  distinct(periodo_de_ingresso) %>%
+  arrange(periodo_de_ingresso)
+
+alunos_sem_duplicatas %>%
+  filter(curriculo == "Currículo 2017") %>%
+  distinct(periodo_de_ingresso) %>%
+  arrange(periodo_de_ingresso)
+
+###
+
+library(dplyr)
+
+# Contar quantos alunos ingressaram em cada currículo
+ingressantes_por_curriculo <- alunos_sem_duplicatas %>%
+  group_by(curriculo) %>%
+  summarise(qtd_ingressantes = n()) %>%
+  arrange(desc(qtd_ingressantes))
+
+# Visualizar a tabela
+print(ingressantes_por_curriculo)
+
+###
+library(ggplot2)
+library(dplyr)
+
+# Agrupar e contar os ingressantes por currículo
+ingressantes_por_curriculo <- alunos_sem_duplicatas %>%
+  group_by(curriculo) %>%
+  summarise(qtd_ingressantes = n()) %>%
+  arrange(desc(qtd_ingressantes))
+
+# Gráfico
+ggplot(ingressantes_por_curriculo, aes(x = as.factor(curriculo), y = qtd_ingressantes, fill = as.factor(curriculo))) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = qtd_ingressantes), vjust = -0.5, size = 5) +
+  labs(
+    title = "Quantidade de Ingressantes por Currículo",
+    x = "Currículo",
+    y = "Quantidade de Ingressantes",
+    fill = "Currículo"
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_brewer(palette = "Set2")
+
+
+###
+unique(alunos_sem_duplicatas$curriculo)
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Filtrar os currículos de interesse
+dados_filtrados <- alunos_sem_duplicatas %>%
+  filter(curriculo %in% c("Currículo 1999", "Currículo 2017"))
+
+# Total de ingressantes por currículo
+total_por_curriculo <- dados_filtrados %>%
+  group_by(curriculo) %>%
+  summarise(total_ingressantes = n())
+
+# Evasões por currículo (INATIVO e não GRADUADO)
+evasao_por_curriculo <- dados_filtrados %>%
+  filter(status == "INATIVO", tipo_de_evasao != "GRADUADO") %>%
+  group_by(curriculo) %>%
+  summarise(qtd_evasoes = n())
+
+# Juntar totais e evasões
+taxa_evasao <- total_por_curriculo %>%
+  left_join(evasao_por_curriculo, by = "curriculo") %>%
+  mutate(qtd_evasoes = ifelse(is.na(qtd_evasoes), 0, qtd_evasoes),
+         taxa_evasao = qtd_evasoes / total_ingressantes)
+
+# Gráfico
+ggplot(taxa_evasao, aes(x = curriculo, y = taxa_evasao, fill = curriculo)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = scales::percent(taxa_evasao, accuracy = 0.1)),
+            vjust = -0.5, size = 5) +
+  labs(
+    title = "Taxa de Evasão por Currículo",
+    x = "Currículo",
+    y = "Taxa de Evasão",
+    fill = "Currículo"
+  ) +
+  scale_fill_manual(values = c("Currículo 1999" = "steelblue", "Currículo 2017" = "darkorange")) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0,1)) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+
+###
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(stringr)
+
+# Definir intervalo dos períodos de ingresso a considerar (exemplo 2011.1 a 2023.2)
+periodos_validos <- paste0(rep(2011:2023, each=2), c(".1", ".2"))
+
+# Filtrar dados para períodos válidos e os currículos
+dados_filtrados <- alunos_sem_duplicatas %>%
+  filter(periodo_de_ingresso %in% periodos_validos,
+         curriculo %in% c("Currículo 1999", "Currículo 2017"))
+
+# Total ingressantes por período e currículo
+total_por_periodo_curriculo <- dados_filtrados %>%
+  group_by(periodo_de_ingresso, curriculo) %>%
+  summarise(total_ingressantes = n(), .groups = "drop")
+
+# Total evasões (INATIVO e tipo_de_evasao != GRADUADO) por período e currículo
+evasao_por_periodo_curriculo <- dados_filtrados %>%
+  filter(status == "INATIVO", tipo_de_evasao != "GRADUADO") %>%
+  group_by(periodo_de_ingresso, curriculo) %>%
+  summarise(qtd_evasoes = n(), .groups = "drop")
+
+# Juntar para calcular taxa de evasão
+taxa_evasao_periodo <- total_por_periodo_curriculo %>%
+  left_join(evasao_por_periodo_curriculo, by = c("periodo_de_ingresso", "curriculo")) %>%
+  mutate(qtd_evasoes = ifelse(is.na(qtd_evasoes), 0, qtd_evasoes),
+         taxa_evasao = qtd_evasoes / total_ingressantes)
+
+# Ordenar fator do período para gráfico
+taxa_evasao_periodo$periodo_de_ingresso <- factor(taxa_evasao_periodo$periodo_de_ingresso,
+                                                  levels = sort(unique(taxa_evasao_periodo$periodo_de_ingresso)))
+
+# Plot barras agrupadas por período e currículo
+ggplot(taxa_evasao_periodo, aes(x = periodo_de_ingresso, y = taxa_evasao, fill = curriculo)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), width = 0.7) +
+  labs(
+    title = "Taxa de Evasão por Período e Currículo",
+    x = "Período de Ingresso",
+    y = "Taxa de Evasão",
+    fill = "Currículo"
+  ) +
+  scale_fill_manual(values = c("Currículo 1999" = "steelblue", "Currículo 2017" = "darkorange")) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0,1)) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    text = element_text(size = 12),
+    plot.title = element_text(hjust = 0.5)
+  )
+
 
 
 # Contar evasões e calcular proporção por currículo
