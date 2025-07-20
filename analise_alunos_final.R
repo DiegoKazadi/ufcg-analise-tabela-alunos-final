@@ -479,7 +479,59 @@ ggplot(taxa_evasao_periodo, aes(x = periodo_de_ingresso, y = taxa_evasao, fill =
     plot.title = element_text(hjust = 0.5)
   )
 
+###
+# Mostrar os números no console
+graduados_taxa %>%
+  select(curriculo, qtd_graduados, total_alunos, taxa) %>%
+  arrange(desc(curriculo))
+library(ggplot2)
+library(dplyr)
 
+# Filtra apenas os alunos graduados
+graduados <- alunos_sem_duplicatas %>%
+  filter(tipo_de_evasao == "GRADUADO")
+
+# Conta total de alunos por currículo
+totais_curriculo <- alunos_sem_duplicatas %>%
+  group_by(curriculo) %>%
+  summarise(total_alunos = n())
+
+# Conta graduados por currículo
+graduados_por_curriculo <- graduados %>%
+  group_by(curriculo) %>%
+  summarise(qtd_graduados = n())
+
+# Junta e calcula a taxa de graduação
+graduados_taxa <- left_join(graduados_por_curriculo, 
+                            totais_curriculo, 
+                            by = "curriculo") %>%
+  mutate(taxa = round((qtd_graduados / total_alunos) * 100, 1),
+         label = paste0(qtd_graduados, " (", taxa, "%)"))
+
+# Exibe os dados no console
+print(graduados_taxa %>%
+        select(curriculo, qtd_graduados, total_alunos, taxa))
+
+# Gera o gráfico
+ggplot(graduados_taxa, aes(x = curriculo, y = qtd_graduados, fill = curriculo)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = label), vjust = -0.4, size = 5) +
+  labs(
+    title = "Quantidade e Taxa de Graduados por Currículo",
+    x = "Currículo",
+    y = "Quantidade de Graduados",
+    fill = "Currículo"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("Currículo 1999" = "forestgreen", 
+                               "Currículo 2017" = "darkorange")) +
+  theme(
+    text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  ylim(0, max(graduados_taxa$qtd_graduados) * 1.2)
+
+###
 
 # Contar evasões e calcular proporção por currículo
 
