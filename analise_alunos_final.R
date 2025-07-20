@@ -1,19 +1,17 @@
 # Carregar bibliotecas necessárias
-install.packages("janitor")
-install.packages("gt")
-install.packages("forcats")
-install.packages("dplyr")  # Instala, se necessário
-library(readr)      # Para leitura de arquivos CSV
-library(dplyr)      # Para manipulação de dados
-library(stringr)    # Para operações com strings
-library(ggplot2)    # Para visualizações futuras (opcional)
-library(janitor)
-library(scales)
-library(viridis)
-library(gt)
-library(viridis)  # Paleta moderna e acessível
-library(ggthemes) # Tema mais elegante
+install.packages(c("ggplot2", "dplyr", "readr", "tidyr", "tibble", "stringr", "purrr", "forcats"))
+install.packages("tidyverse")
 
+# Carregamento das bibliotecas necessárias
+library(tidyverse)  # carrega: ggplot2, dplyr, readr, stringr, forcats, etc.
+library(janitor)    # limpeza de nomes e tabelas
+library(gt)         # para gerar tabelas elegantes
+library(viridis)    # paleta de cores acessível
+library(ggthemes)   # temas extras para gráficos
+
+
+library(dplyr) # Testando
+mtcars %>% head()
 
 # Definir o caminho base onde estão os arquivos
 caminho_base <- "/home/diego/Documentos/Semestre 2024.2/Nova_Analise/tabelas"
@@ -153,8 +151,7 @@ ggplot(ingressantes_por_periodo, aes(x = periodo_de_ingresso, y = total_ingressa
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   ylim(0, max(ingressantes_por_periodo$total_ingressantes) * 1.1)  # Espaço extra para o texto
 
-###############################################################################
-library(tidyverse)
+##############################
 
 # Filtrar alunos com status ATIVO
 ativos_por_periodo <- alunos_sem_duplicatas %>%
@@ -184,8 +181,6 @@ ggplot(ativos_por_periodo, aes(x = periodo_de_ingresso, y = total_ativos)) +
 
 
 ###
-
-library(tidyverse)
 
 # Filtrar apenas alunos com status ATIVO
 ativos_genero <- alunos_sem_duplicatas %>%
@@ -217,6 +212,144 @@ ggplot(ativos_genero, aes(x = periodo_de_ingresso, y = total, fill = sexo)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ###
+
+# Filtrar apenas os alunos inativos com tipo de evasão 'GRADUADO'
+graduados <- alunos_sem_duplicatas %>%
+  filter(status == "INATIVO", tipo_de_evasao == "GRADUADO")
+
+# Contar por Sexo
+graduados_por_genero <- graduados %>%
+  group_by(sexo) %>%
+  summarise(Total = n()) %>%
+  arrange(desc(Total))
+
+# Visualizar a tabela
+print(graduados_por_genero)
+
+# Gráfico de barras
+ggplot(graduados_por_genero, aes(x = sexo, y = Total, fill = sexo)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Distribuição de Alunos Graduados por Gênero",
+    x = "Sexo",
+    y = "Número de Alunos Graduados"
+  ) +
+  theme_minimal()
+
+###
+
+library(tidyverse)
+
+# Padronizar o conteúdo da coluna tipo_de_evasao
+alunos_sem_duplicatas$tipo_de_evasao <- toupper(alunos_sem_duplicatas$tipo_de_evasao)
+
+# Filtrar apenas os graduados entre os inativos
+graduados <- alunos_sem_duplicatas %>%
+  filter(status == "INATIVO", tipo_de_evasao == "GRADUADO") %>%
+  group_by(periodo_de_ingresso) %>%
+  summarise(total = n(), .groups = 'drop') %>%
+  arrange(periodo_de_ingresso)
+
+# Garantir que o eixo x respeite a ordem cronológica
+graduados$periodo_de_ingresso <- factor(graduados$periodo_de_ingresso, levels = sort(unique(graduados$periodo_de_ingresso)))
+
+# Gerar o gráfico
+ggplot(graduados, aes(x = periodo_de_ingresso, y = total)) +
+  geom_bar(stat = "identity", fill = "#1f78b4") +
+  geom_text(aes(label = total), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Alunos Graduados por Período de Ingresso (2011.1 – 2023.2)",
+    x = "Período de Ingresso",
+    y = "Número de Graduados"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+unique(alunos_sem_duplicatas$status)
+alunos_sem_duplicatas$status <- toupper(alunos_sem_duplicatas$status)
+table(alunos_sem_duplicatas$status)
+alunos_sem_duplicatas %>%
+  filter(status == "GRADUADO") %>%
+  head()
+
+###
+
+
+
+#  Classificar alunos por currículo com base no período de ingresso
+
+alunos_sem_duplicatas <- alunos_sem_duplicatas %>%
+  mutate(curriculo = case_when(
+    periodo_de_ingresso < "2017.2" ~ "Currículo 1999",
+    periodo_de_ingresso >= "2017.2" ~ "Currículo 2017"
+  ))
+
+#  Filtrar somente os períodos entre 2011.1 e 2023.2
+
+alunos_periodo <- alunos_sem_duplicatas %>%
+  filter(periodo_de_ingresso >= "2011.1", periodo_de_ingresso <= "2023.2")
+
+
+# Contar evasões e calcular proporção por currículo
+
+evasao_curriculo <- alunos_periodo %>%
+  filter(status == "INATIVO", tipo_de_evasao != "GRADUADO") %>%
+  group_by(curriculo) %>%
+  summarise(
+    evasoes = n()
+  )
+
+# E comparar com o total de ingressantes por currículo:
+
+ingressantes_curriculo <- alunos_periodo %>%
+  group_by(curriculo) %>%
+  summarise(ingressantes = n())
+
+comparativo <- left_join(evasao_curriculo, ingressantes_curriculo, by = "curriculo") %>%
+  mutate(taxa_evasao = round((evasoes / ingressantes) * 100, 2))
+
+# Visualizar o comparativo em gráfico de barras
+
+ggplot(comparativo, aes(x = curriculo, y = taxa_evasao, fill = curriculo)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Comparativo de Evasão entre Currículos (2011–2023)",
+    x = "Currículo",
+    y = "Taxa de Evasão (%)"
+  ) +
+  scale_fill_manual(values = c("Currículo 1999" = "#0072B2", "Currículo 2017" = "#D55E00")) +
+  theme_minimal()
+
+# Visualização por período e currículo juntos
+
+evasao_por_periodo <- alunos_periodo %>%
+  mutate(evasao = ifelse(status == "INATIVO" & tipo_de_evasao != "GRADUADO", 1, 0)) %>%
+  group_by(periodo_de_ingresso, curriculo) %>%
+  summarise(
+    evasoes = sum(evasao),
+    total = n(),
+    taxa_evasao = round((evasoes / total) * 100, 2),
+    .groups = 'drop'
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Distribuição por Cor/Raça dos Alunos
 
@@ -287,6 +420,163 @@ ggplot(distribuicao_cor, aes(x = reorder(cor, -total), y = total, fill = cor)) +
   scale_fill_brewer(palette = "Set2")
 
 ###
+library(tidyverse)
+
+# Garantir que a variável de idade seja numérica
+alunos_sem_duplicatas$idade_aproximada_no_ingresso <- as.numeric(alunos_sem_duplicatas$idade_aproximada_no_ingresso)
+
+# Agrupar por idade e contar
+distribuicao_idade <- alunos_sem_duplicatas %>%
+  group_by(idade_aproximada_no_ingresso) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  arrange(idade_aproximada_no_ingresso)
+
+# Gráfico com cores diferentes por idade
+ggplot(distribuicao_idade, aes(x = factor(idade_aproximada_no_ingresso), y = total, fill = factor(idade_aproximada_no_ingresso))) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Distribuição dos Alunos por Idade Aproximada no Ingresso",
+    x = "Idade no Ingresso",
+    y = "Número de Alunos",
+    fill = "Idade"
+  ) +
+  scale_fill_viridis_d(option = "plasma", direction = -1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+###
+
+library(tidyverse)
+
+# Garantir que a idade esteja como numérica
+alunos_sem_duplicatas$idade_aproximada_no_ingresso <- as.numeric(alunos_sem_duplicatas$idade_aproximada_no_ingresso)
+
+# Calcular frequência e percentual
+distribuicao_idade <- alunos_sem_duplicatas %>%
+  group_by(idade_aproximada_no_ingresso) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  mutate(percentual = round((total / sum(total)) * 100, 1))  # Arredonda para 1 casa decimal
+
+# Gráfico com percentuais no topo das barras
+ggplot(distribuicao_idade, aes(x = factor(idade_aproximada_no_ingresso), y = percentual, fill = factor(idade_aproximada_no_ingresso))) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Distribuição Percentual da Idade no Ingresso (2011.1 a 2023.2)",
+    x = "Idade no Ingresso",
+    y = "Percentual (%)",
+    fill = "Idade"
+  ) +
+  scale_fill_viridis_d(option = "plasma", direction = -1) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+###
+
+library(tidyverse)
+
+# Calcular frequência e percentual por status
+distribuicao_status <- alunos_sem_duplicatas %>%
+  group_by(status) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  mutate(percentual = round((total / sum(total)) * 100, 1))
+
+# Gráfico com percentuais no topo
+ggplot(distribuicao_status, aes(x = reorder(status, -percentual), y = percentual, fill = status)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Distribuição Percentual dos Alunos por Status Acadêmico",
+    x = "Status",
+    y = "Percentual (%)",
+    fill = "Status"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+###
+
+library(tidyverse)
+
+# Filtrar apenas os alunos com status INATIVO
+inativos <- alunos_sem_duplicatas %>%
+  filter(status == "INATIVO")
+
+# Agrupar por tipo de evasão e calcular percentual
+distribuicao_evasao <- inativos %>%
+  group_by(tipo_de_evasao) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  mutate(percentual = round((total / sum(total)) * 100, 1))
+
+# Gráfico
+ggplot(distribuicao_evasao, aes(x = reorder(tipo_de_evasao, -percentual), y = percentual, fill = tipo_de_evasao)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Distribuição dos Alunos Inativos por Tipo de Evasão",
+    x = "Tipo de Evasão",
+    y = "Percentual (%)",
+    fill = "Tipo de Evasão"
+  ) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))
+
+
+### 
+library(tidyverse)
+
+# Verificar se a variável está em formato adequado
+alunos_sem_duplicatas$estado_civil <- as.factor(alunos_sem_duplicatas$estado_civil)
+
+# Agrupar e calcular percentual
+distribuicao_estado_civil <- alunos_sem_duplicatas %>%
+  group_by(estado_civil) %>%
+  summarise(total = n(), .groups = "drop") %>%
+  mutate(percentual = round((total / sum(total)) * 100, 1))
+
+# Gráfico
+ggplot(distribuicao_estado_civil, aes(x = reorder(estado_civil, -percentual), y = percentual, fill = estado_civil)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Distribuição Percentual por Estado Civil dos Alunos (2011.1 a 2023.2)",
+    x = "Estado Civil",
+    y = "Percentual (%)",
+    fill = "Estado Civil"
+  ) +
+  scale_fill_brewer(palette = "Pastel2") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+library(viridis)
+
+ggplot(distribuicao_estado_civil, aes(x = reorder(estado_civil, -percentual), y = percentual, fill = estado_civil)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Distribuição Percentual por Estado Civil dos Alunos (2011.1 a 2023.2)",
+    x = "Estado Civil",
+    y = "Percentual (%)",
+    fill = "Estado Civil"
+  ) +
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # opção D para tons azuis/verde
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+ggplot(distribuicao_estado_civil, aes(x = reorder(estado_civil, -percentual), y = percentual, fill = estado_civil)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(percentual, "%")), vjust = -0.5, size = 3.5) +
+  labs(
+    title = "Distribuição Percentual por Estado Civil dos Alunos (2011.1 a 2023.2)",
+    x = "Estado Civil",
+    y = "Percentual (%)",
+    fill = "Estado Civil"
+  ) +
+  scale_fill_brewer(palette = "Set3") +  # cores suaves e harmoniosas
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
 # curva de ingressantes
 
