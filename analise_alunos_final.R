@@ -561,7 +561,7 @@ ggplot(tempo_medio, aes(x = curriculo, y = tempo_medio, fill = curriculo)) +
     y = "Tempo Médio (em períodos)",
     fill = "Currículo"
   ) +
-  scale_fill_manual(values = c("Currículo 1999" = "forestgreen", "Currículo 2017" = "darkorange")) +
+  scale_fill_manual(values = c("Currículo 1999" = "steelblue", "Currículo 2017" = "darkorange")) +
   theme_minimal() +
   theme(
     text = element_text(size = 14),
@@ -571,36 +571,107 @@ ggplot(tempo_medio, aes(x = curriculo, y = tempo_medio, fill = curriculo)) +
 ###
 
 # média de idade ao ingresso dos evadidos por currículo
-
-library(dplyr)
-
-idade_ingresso_evasao <- alunos_sem_duplicatas %>%
-  filter(status == "INATIVO", tipo_de_evasao != "GRADUADO") %>%
-  group_by(curriculo) %>%
-  summarise(
-    media_idade_ingresso = mean(idade_aproximada_no_ingresso, na.rm = TRUE),
-    sd_idade_ingresso = sd(idade_aproximada_no_ingresso, na.rm = TRUE),
-    qtd = n()
-  )
-
-print(idade_ingresso_evasao)
-
-
 library(ggplot2)
+library(ggplot2)
+# Define cores personalizadas para os currículos
+cores_personalizadas <- c("Currículo 1999" = "forestgreen",   # verde
+                          "Currículo 2017" = "darkorange")   
 
 ggplot(idade_ingresso_evasao, aes(x = curriculo, y = media_idade_ingresso, fill = curriculo)) +
-  geom_bar(stat = "identity", width = 0.6) +
-  geom_text(aes(label = round(media_idade_ingresso, 1)), vjust = -0.5, size = 5) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = paste0(round(media_idade_ingresso, 1), " anos")), 
+            vjust = -0.5, color = "black", size = 5) +
+  scale_fill_manual(values = cores_personalizadas, name = "Currículo") +
   labs(
-    title = "Idade Média ao Ingresso dos Alunos Evadidos",
+    title = "Idade Média no Momento da Evasão",
     x = "Currículo",
-    y = "Idade Média ao Ingresso"
+    y = "Idade ao Ingresso (em anos)"
+  ) +
+  coord_cartesian(ylim = c(15, NA)) +  # eixo y começa em 15 anos
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "right")
+
+###
+
+# Proporção de estudantes por sexo nos dois currículos
+library(ggplot2)
+library(dplyr)
+library(dplyr)
+library(ggplot2)
+library(dplyr)
+library(ggplot2)
+
+# Define cores personalizadas
+cores_personalizadas <- c("Currículo 1999" = "steelblue",
+                          "Currículo 2017" = "darkorange")
+
+# Agrupa por currículo e sexo
+ingressantes_por_sexo <- alunos_sem_duplicatas %>%
+  filter(!is.na(sexo), !is.na(curriculo)) %>%
+  group_by(curriculo, sexo) %>%
+  summarise(qtd = n(), .groups = "drop") %>%
+  group_by(curriculo) %>%
+  mutate(percentual = round(100 * qtd / sum(qtd), 1)) %>%
+  ungroup()
+
+# Cria coluna com o texto combinado: número e %
+ingressantes_por_sexo <- ingressantes_por_sexo %>%
+  mutate(label = paste0(qtd, "\n(", percentual, "%)"))
+
+# Plotagem
+ggplot(ingressantes_por_sexo, aes(x = sexo, y = qtd, fill = curriculo)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = label), 
+            position = position_dodge(width = 0.7), 
+            vjust = -0.3, size = 5, fontface = "plain") +
+  scale_fill_manual(values = cores_personalizadas, name = "Currículo") +
+  labs(
+    title = "Ingressantes por Sexo e Currículo",
+    x = "Sexo",
+    y = "Quantidade de Alunos"
+  ) +
+  ylim(0, max(ingressantes_por_sexo$qtd) * 1.15) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "right")
+
+###
+ggplot(dados_cor, aes(x = cor, y = total, fill = curriculo)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = paste0(round(porc, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.3, size = 3.5) +
+  scale_fill_manual(values = c("Currículo 1999" = "steelblue", 
+                               "Currículo 2017" = "darkorange")) +
+  labs(
+    x = "Cor/Raça Declarada",
+    y = "Número de Ingressantes",
+    title = "Ingressantes por Cor/Raça Declarada",
+    fill = "Currículo"
   ) +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1)  # Rotaciona os rótulos do eixo x
+  )
 
 
-
+# Versão com barras horizontais
+ggplot(dados_cor, aes(x = cor, y = total, fill = curriculo)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = paste0(round(porc, 1), "%")), 
+            position = position_dodge(width = 0.9), 
+            hjust = -0.1, size = 3.5) +
+  scale_fill_manual(values = c("Currículo 1999" = "steelblue", 
+                               "Currículo 2017" = "darkorange")) +
+  labs(
+    x = "Cor/Raça Declarada",
+    y = "Número de Ingressantes",
+    title = "Ingressantes por Cor/Raça Declarada",
+    fill = "Currículo"
+  ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(legend.position = "right")
 
 
 
